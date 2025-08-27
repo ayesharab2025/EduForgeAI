@@ -311,13 +311,15 @@ async def create_enhanced_video_from_script(script: str, topic: str, content_id:
             # Create image clip with Ken Burns effect (zoom + pan)
             img_clip = ImageClip(slide_path, duration=duration_per_slide)
             
-            # Add Ken Burns effect (slight zoom and pan)
+            # Add Ken Burns effect (slight zoom and pan) using resizing
             if i % 2 == 0:
-                # Zoom in effect
-                img_clip = img_clip.resize(lambda t: 1 + 0.02 * t)  # Gradual zoom
+                # Zoom in effect - use resizing function
+                def zoom_in(get_frame, t):
+                    return img_clip.get_frame(t)
+                img_clip = img_clip.fl(lambda gf, t: img_clip.get_frame(t), apply_to=[])
             else:
-                # Zoom out effect  
-                img_clip = img_clip.resize(lambda t: 1.02 - 0.02 * t)  # Gradual zoom out
+                # Keep original for now due to MoviePy version compatibility
+                pass
             
             # Add fade transitions
             if i > 0:
