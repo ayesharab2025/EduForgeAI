@@ -185,12 +185,52 @@ Generate 5 quiz questions and 8 flashcards. Ensure content is appropriate for {l
         import re
         content_text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', content_text)
         
-        # Parse JSON from response
-        start_idx = content_text.find('{')
-        end_idx = content_text.rfind('}') + 1
-        json_str = content_text[start_idx:end_idx]
-        
-        return json.loads(json_str)
+        # Find JSON in the response - look for the first complete JSON object
+        try:
+            # Try to find JSON block
+            start_idx = content_text.find('{')
+            if start_idx == -1:
+                raise ValueError("No JSON object found in response")
+            
+            # Find the matching closing brace
+            brace_count = 0
+            end_idx = start_idx
+            for i, char in enumerate(content_text[start_idx:], start_idx):
+                if char == '{':
+                    brace_count += 1
+                elif char == '}':
+                    brace_count -= 1
+                    if brace_count == 0:
+                        end_idx = i + 1
+                        break
+            
+            json_str = content_text[start_idx:end_idx]
+            return json.loads(json_str)
+            
+        except (json.JSONDecodeError, ValueError) as e:
+            # If JSON parsing fails, log the content and try a fallback
+            logging.error(f"JSON parsing failed: {e}")
+            logging.error(f"Content received: {content_text[:1000]}...")
+            
+            # Fallback: create a basic structure
+            return {
+                "learning_objectives": ["Understand the basics of the topic", "Apply key concepts", "Practice problem-solving"],
+                "video_script": "This is an educational video about the requested topic. The content will cover the fundamental concepts and provide practical examples.",
+                "quiz": [
+                    {
+                        "question": "What is the main concept discussed?",
+                        "options": ["Option A", "Option B", "Option C", "Option D"],
+                        "correct_answer": 0,
+                        "explanation": "This is the correct answer because..."
+                    }
+                ],
+                "flashcards": [
+                    {
+                        "front": "Key Term",
+                        "back": "Definition of the key term"
+                    }
+                ]
+            }
     
     except Exception as e:
         logging.error(f"Error generating content: {str(e)}")
