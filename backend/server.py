@@ -130,7 +130,7 @@ async def generate_content(
         logger.info(f"Generating content for topic: {request.topic}, level: {request.learner_level}, style: {request.learning_style}")
         
         # Validate learning style and level
-        valid_styles = ["visual", "auditory", "reading", "kinesthetic"]
+        valid_styles = ["visual", "auditory", "reading", "kinesthetic", "comprehensive"]
         valid_levels = ["beginner", "intermediate", "advanced"]
         
         if request.learning_style.lower() not in valid_styles:
