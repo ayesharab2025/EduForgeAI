@@ -181,9 +181,14 @@ Generate 5 quiz questions and 8 flashcards. Ensure content is appropriate for {l
         
         content_text = response.choices[0].message.content
         
-        # Clean the content text to remove control characters
+        # Clean the content text to remove control characters and markdown
         import re
         content_text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', content_text)
+        
+        # Remove markdown code blocks if present
+        content_text = re.sub(r'```json\s*', '', content_text)
+        content_text = re.sub(r'```\s*', '', content_text)
+        content_text = re.sub(r'Here is.*?:', '', content_text)
         
         # Find JSON in the response - look for the first complete JSON object
         try:
