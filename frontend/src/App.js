@@ -573,29 +573,17 @@ function App() {
                     </TabsContent>
 
                     {/* Interactive Quiz */}
-                    <TabsContent value="quiz" className="space-y-6 mt-0">
-                      <div className="text-center mb-6">
-                        <h3 className="text-2xl font-semibold text-slate-800 mb-2">🧠 Interactive Knowledge Check</h3>
-                        <p className="text-slate-600">
-                          Test your understanding with these personalized questions
+                    <TabsContent value="quiz" className="space-y-4 lg:space-y-6 mt-0">
+                      <div className="text-center mb-4 lg:mb-6">
+                        <h3 className="text-xl lg:text-2xl font-semibold text-slate-800 mb-2">🧠 Knowledge Check</h3>
+                        <p className="text-sm lg:text-base text-slate-600">
+                          Test your understanding with these questions about {generatedContent.topic}
                         </p>
-                        {generatedContent.quiz?.length > 0 && (
-                          <div className="flex items-center justify-center gap-4 mt-4">
-                            <Badge variant="outline" className="px-3 py-1">
-                              <Clock className="h-4 w-4 mr-1" />
-                              ~{generatedContent.quiz.length * 2} minutes
-                            </Badge>
-                            <Badge variant="outline" className="px-3 py-1">
-                              <TrendingUp className="h-4 w-4 mr-1" />
-                              {generatedContent.learner_level} level
-                            </Badge>
-                          </div>
-                        )}
                       </div>
 
                       {/* Quiz Progress */}
                       {generatedContent.quiz?.length > 0 && (
-                        <div className="mb-6 max-w-2xl mx-auto">
+                        <div className="mb-4 lg:mb-6">
                           <div className="flex items-center justify-between text-sm text-slate-600 mb-2">
                             <span>Progress</span>
                             <span>{Object.keys(quizAnswers).length}/{generatedContent.quiz.length} answered</span>
