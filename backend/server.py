@@ -232,7 +232,7 @@ async def create_video_from_script(script: str, content_id: str) -> str:
         
         # Concatenate video clips
         final_video = concatenate_videoclips(video_clips)
-        final_video = final_video.set_audio(audio_clip)
+        final_video = final_video.with_audio(audio_clip)
         
         # Save video
         video_file = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False)
