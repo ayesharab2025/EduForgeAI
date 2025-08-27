@@ -11,7 +11,9 @@ class EduForgeAPITester:
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0
-        self.content_id = None
+        self.content_ids = []
+        self.critical_failures = []
+        self.minor_issues = []
 
     def run_test(self, name, method, endpoint, expected_status, data=None, timeout=30):
         """Run a single API test"""
@@ -45,15 +47,19 @@ class EduForgeAPITester:
                 try:
                     error_data = response.json()
                     print(f"   Error: {error_data}")
+                    self.critical_failures.append(f"{name}: {error_data}")
                 except:
                     print(f"   Error: {response.text}")
+                    self.critical_failures.append(f"{name}: {response.text}")
                 return False, {}
 
         except requests.exceptions.Timeout:
             print(f"❌ FAILED - Request timed out after {timeout} seconds")
+            self.critical_failures.append(f"{name}: Request timeout after {timeout}s")
             return False, {}
         except Exception as e:
             print(f"❌ FAILED - Error: {str(e)}")
+            self.critical_failures.append(f"{name}: {str(e)}")
             return False, {}
 
     def test_health_check(self):
