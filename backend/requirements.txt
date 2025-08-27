@@ -23,3 +23,7 @@ numpy>=1.26.0
 python-multipart>=0.0.9
 jq>=1.6.0
 typer>=0.9.0
+groq>=0.11.0
+gtts>=2.5.0
+moviepy>=1.0.3
+pillow>=10.0.0
