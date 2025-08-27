@@ -8,7 +8,7 @@ import uuid
 class ContentRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=200, description="Learning topic")
     learner_level: str = Field(..., description="Learning level: beginner, intermediate, advanced")
-    learning_style: str = Field(..., description="Learning style: visual, auditory, reading, kinesthetic")
+    learning_style: str = Field(default="comprehensive", description="Learning style: visual, auditory, reading, kinesthetic, comprehensive")
 
 class VideoRequest(BaseModel):
     content_id: str = Field(..., description="Educational content ID")
