@@ -24,7 +24,8 @@ import {
   Users,
   TrendingUp,
   Award,
-  Zap
+  Zap,
+  Lightbulb
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import ChatBot from "./components/ChatBot";
