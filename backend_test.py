@@ -109,49 +109,185 @@ class EduForgeAPITester:
                 
         return success
 
-    def test_generate_content(self):
-        """Test content generation endpoint"""
+    def test_generate_content_without_learning_style(self):
+        """Test content generation without learning_style parameter (should default to 'comprehensive')"""
         test_data = {
-            "topic": "Machine Learning Basics",
-            "learner_level": "beginner",
-            "learning_style": "visual"
+            "topic": "Machine Learning Fundamentals",
+            "learner_level": "beginner"
+            # Intentionally omitting learning_style to test default behavior
         }
         
         success, response = self.run_test(
-            "Generate Content",
+            "Generate Content (No Learning Style)",
             "POST",
             "generate_content",
             200,
             data=test_data,
-            timeout=60  # Content generation may take longer
+            timeout=60
         )
         
         if success:
-            # Validate response structure
-            required_fields = ['id', 'topic', 'learner_level', 'learning_style', 
-                             'learning_objectives', 'video_script', 'quiz', 'flashcards']
+            self._validate_content_response(response, "Machine Learning Fundamentals")
+            self.content_ids.append(response.get('id'))
             
-            missing_fields = [field for field in required_fields if field not in response]
-            if missing_fields:
-                print(f"   ⚠️  Missing fields: {missing_fields}")
+            # Check if learning_style was set to default
+            learning_style = response.get('learning_style')
+            if learning_style == 'comprehensive':
+                print(f"   ✅ Learning style correctly defaulted to 'comprehensive'")
             else:
-                print(f"   ✅ All required fields present")
+                print(f"   ⚠️  Learning style is '{learning_style}', expected 'comprehensive'")
+                self.minor_issues.append(f"Learning style not defaulting correctly: {learning_style}")
                 
-            # Store content ID for video generation test
-            self.content_id = response.get('id')
-            
-            # Validate content quality
-            objectives_count = len(response.get('learning_objectives', []))
-            quiz_count = len(response.get('quiz', []))
-            flashcards_count = len(response.get('flashcards', []))
-            
-            print(f"   📊 Content Stats:")
-            print(f"      - Learning Objectives: {objectives_count}")
-            print(f"      - Quiz Questions: {quiz_count}")
-            print(f"      - Flashcards: {flashcards_count}")
-            print(f"      - Video Script Length: {len(response.get('video_script', ''))}")
-            
         return success
+
+    def test_generate_content_with_learning_style(self):
+        """Test content generation with explicit learning_style parameter"""
+        test_data = {
+            "topic": "Quantum Physics Basics",
+            "learner_level": "intermediate",
+            "learning_style": "visual"
+        }
+        
+        success, response = self.run_test(
+            "Generate Content (With Learning Style)",
+            "POST",
+            "generate_content",
+            200,
+            data=test_data,
+            timeout=60
+        )
+        
+        if success:
+            self._validate_content_response(response, "Quantum Physics Basics")
+            self.content_ids.append(response.get('id'))
+                
+        return success
+
+    def test_generate_content_spanish_grammar(self):
+        """Test content generation with Spanish Grammar topic"""
+        test_data = {
+            "topic": "Spanish Grammar - Present Tense",
+            "learner_level": "beginner"
+        }
+        
+        success, response = self.run_test(
+            "Generate Content (Spanish Grammar)",
+            "POST",
+            "generate_content",
+            200,
+            data=test_data,
+            timeout=60
+        )
+        
+        if success:
+            self._validate_content_response(response, "Spanish Grammar")
+            self.content_ids.append(response.get('id'))
+                
+        return success
+
+    def _validate_content_response(self, response, topic_keyword):
+        """Validate the structure and quality of content generation response"""
+        # Validate response structure
+        required_fields = ['id', 'topic', 'learner_level', 'learning_style', 
+                         'learning_objectives', 'video_script', 'quiz', 'flashcards']
+        
+        missing_fields = [field for field in required_fields if field not in response]
+        if missing_fields:
+            print(f"   ❌ Missing fields: {missing_fields}")
+            self.critical_failures.append(f"Content generation missing fields: {missing_fields}")
+        else:
+            print(f"   ✅ All required fields present")
+        
+        # Validate learning objectives (should be 5-7)
+        objectives = response.get('learning_objectives', [])
+        objectives_count = len(objectives)
+        print(f"   📚 Learning Objectives: {objectives_count}")
+        
+        if 5 <= objectives_count <= 7:
+            print(f"   ✅ Learning objectives count is appropriate (5-7)")
+        else:
+            print(f"   ⚠️  Learning objectives count should be 5-7, got {objectives_count}")
+            self.minor_issues.append(f"Learning objectives count: {objectives_count} (expected 5-7)")
+        
+        # Check if objectives are topic-specific
+        topic_specific_objectives = [obj for obj in objectives if topic_keyword.lower() in obj.lower()]
+        if len(topic_specific_objectives) >= 3:
+            print(f"   ✅ Learning objectives are topic-specific")
+        else:
+            print(f"   ⚠️  Learning objectives may be too generic")
+            self.minor_issues.append("Learning objectives appear generic")
+        
+        # Validate video script quality
+        video_script = response.get('video_script', '')
+        script_length = len(video_script)
+        print(f"   🎬 Video Script Length: {script_length} characters")
+        
+        if script_length > 500:
+            print(f"   ✅ Video script has substantial content")
+        else:
+            print(f"   ⚠️  Video script seems too short")
+            self.minor_issues.append(f"Video script too short: {script_length} chars")
+        
+        # Check for developer instructions in video script
+        dev_markers = ['[SCENE:', '[CUT TO:', '[FADE IN:', '[FADE OUT:', 'DEVELOPER NOTE:', '[INSTRUCTION:']
+        has_dev_markers = any(marker in video_script.upper() for marker in dev_markers)
+        
+        if not has_dev_markers:
+            print(f"   ✅ Video script is user-friendly without developer instructions")
+        else:
+            print(f"   ❌ Video script contains developer instructions/scene markers")
+            self.critical_failures.append("Video script contains developer instructions")
+        
+        # Validate quiz questions (should be 5)
+        quiz = response.get('quiz', [])
+        quiz_count = len(quiz)
+        print(f"   ❓ Quiz Questions: {quiz_count}")
+        
+        if quiz_count == 5:
+            print(f"   ✅ Quiz has correct number of questions (5)")
+        else:
+            print(f"   ⚠️  Quiz should have 5 questions, got {quiz_count}")
+            self.minor_issues.append(f"Quiz question count: {quiz_count} (expected 5)")
+        
+        # Validate quiz quality
+        if quiz:
+            first_question = quiz[0]
+            required_quiz_fields = ['question', 'options', 'correct_answer', 'explanation', 'hint']
+            missing_quiz_fields = [field for field in required_quiz_fields if field not in first_question]
+            
+            if not missing_quiz_fields:
+                print(f"   ✅ Quiz questions have proper structure")
+            else:
+                print(f"   ❌ Quiz questions missing fields: {missing_quiz_fields}")
+                self.critical_failures.append(f"Quiz structure incomplete: {missing_quiz_fields}")
+            
+            # Check if quiz is topic-specific
+            topic_specific_questions = [q for q in quiz if topic_keyword.lower() in q.get('question', '').lower()]
+            if len(topic_specific_questions) >= 2:
+                print(f"   ✅ Quiz questions are topic-specific")
+            else:
+                print(f"   ⚠️  Quiz questions may be too generic")
+                self.minor_issues.append("Quiz questions appear generic")
+        
+        # Validate flashcards (should be 8)
+        flashcards = response.get('flashcards', [])
+        flashcards_count = len(flashcards)
+        print(f"   🗂️  Flashcards: {flashcards_count}")
+        
+        if flashcards_count == 8:
+            print(f"   ✅ Flashcards have correct count (8)")
+        else:
+            print(f"   ⚠️  Flashcards should be 8, got {flashcards_count}")
+            self.minor_issues.append(f"Flashcard count: {flashcards_count} (expected 8)")
+        
+        # Check flashcard quality
+        if flashcards:
+            topic_specific_flashcards = [fc for fc in flashcards if topic_keyword.lower() in fc.get('front', '').lower() or topic_keyword.lower() in fc.get('back', '').lower()]
+            if len(topic_specific_flashcards) >= 4:
+                print(f"   ✅ Flashcards are topic-specific")
+            else:
+                print(f"   ⚠️  Flashcards may be too generic")
+                self.minor_issues.append("Flashcards appear generic")
 
     def test_generate_video(self):
         """Test video generation endpoint"""
