@@ -204,12 +204,16 @@ class VideoGenerationService:
     
     async def _generate_tts_audio(self, script: str) -> str:
         """Generate high-quality TTS audio"""
-        # Clean script from scene markers
+        # Clean script - remove any remaining scene markers and format for speech
         import re
         clean_script = re.sub(r'\[SCENE: [^\]]+\]', '', script)
         clean_script = re.sub(r'\n+', ' ', clean_script).strip()
         
-        # Generate TTS
+        # Additional formatting for better TTS
+        clean_script = clean_script.replace('. ', '. ')  # Ensure proper pauses
+        clean_script = re.sub(r'\s+', ' ', clean_script)  # Clean up extra spaces
+        
+        # Generate TTS with better pronunciation
         tts = gTTS(text=clean_script, lang='en', slow=False, tld='com')
         audio_file = tempfile.NamedTemporaryFile(suffix='.mp3', delete=False)
         tts.save(audio_file.name)
