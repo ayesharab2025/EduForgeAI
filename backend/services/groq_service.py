@@ -3,7 +3,7 @@ import asyncio
 import logging
 from typing import Dict, Any, Optional
 from groq import Groq
-from ..config import settings, LEARNING_STYLES
+from config import settings, LEARNING_STYLES
 
 logger = logging.getLogger(__name__)
 
