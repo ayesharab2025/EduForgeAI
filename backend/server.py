@@ -237,67 +237,6 @@ Generate 5 quiz questions and 8 flashcards. Ensure content is appropriate for {l
         raise HTTPException(status_code=500, detail=f"Failed to generate content: {str(e)}")
 
 
-async def create_video_from_script(script: str, content_id: str) -> str:
-    """Create video from script using TTS and simple slides"""
-    try:
-        # Create TTS audio
-        tts = gTTS(text=script, lang='en', slow=False)
-        audio_file = tempfile.NamedTemporaryFile(suffix='.mp3', delete=False)
-        tts.save(audio_file.name)
-        
-        # Split script into segments for slides
-        sentences = script.split('. ')
-        slides = []
-        
-        # Create slide images
-        for i, sentence in enumerate(sentences[:6]):  # Limit to 6 slides
-            if sentence.strip():
-                slide_path = create_slide_image(sentence.strip() + '.', i + 1, len(sentences[:6]))
-                slides.append(slide_path)
-        
-        if not slides:
-            # Create a single slide with the full script
-            slide_path = create_slide_image(script[:200] + "...", 1, 1)
-            slides.append(slide_path)
-        
-        # Load audio clip
-        audio_clip = AudioFileClip(audio_file.name)
-        duration_per_slide = audio_clip.duration / len(slides)
-        
-        # Create video clips from slides
-        video_clips = []
-        for slide_path in slides:
-            img_clip = ImageClip(slide_path, duration=duration_per_slide)
-            video_clips.append(img_clip)
-        
-        # Concatenate video clips
-        final_video = concatenate_videoclips(video_clips)
-        final_video = final_video.with_audio(audio_clip)
-        
-        # Save video
-        video_file = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False)
-        final_video.write_videofile(
-            video_file.name,
-            fps=24,
-            audio_codec='aac',
-            logger=None
-        )
-        
-        # Cleanup
-        os.unlink(audio_file.name)
-        for slide_path in slides:
-            try:
-                os.unlink(slide_path)
-            except:
-                pass
-        
-        return video_file.name
-        
-    except Exception as e:
-        logging.error(f"Error creating video: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to create video: {str(e)}")
-
-
 async def create_enhanced_video_from_script(script: str, topic: str, content_id: str) -> str:
     """Create enhanced AI-powered video from script using TTS and AI-generated visuals"""
     try:
