@@ -2,7 +2,7 @@
 import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
-from .groq_service import groq_service
+from services.groq_service import groq_service
 
 logger = logging.getLogger(__name__)
 
