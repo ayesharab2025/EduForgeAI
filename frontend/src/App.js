@@ -677,7 +677,7 @@ function App() {
                         )) || (
                           <Alert>
                             <AlertDescription>
-                              Interactive quiz questions are being generated based on your learning preferences...
+                              Quiz questions are being generated based on the topic...
                             </AlertDescription>
                           </Alert>
                         )}
@@ -689,35 +689,49 @@ function App() {
                           <div className="text-center pt-4">
                             <Button 
                               onClick={submitQuiz} 
-                              className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 px-8 py-3 text-lg font-semibold shadow-lg"
+                              className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 px-6 lg:px-8 py-2 lg:py-3 text-base lg:text-lg font-semibold shadow-lg w-full sm:w-auto"
                             >
-                              <Award className="h-5 w-5 mr-2" />
-                              Submit Quiz & Get Results
+                              <Award className="h-4 w-4 lg:h-5 lg:w-5 mr-2" />
+                              Submit Quiz
                             </Button>
                           </div>
                         )}
 
-                        {/* Quiz Results Summary */}
-                        {showQuizResults && generatedContent.quiz?.length > 0 && (
-                          <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
-                            <CardContent className="p-6 text-center">
+                        {/* Quiz Results */}
+                        {showQuizResults && quizScore && (
+                          <Card className={`${
+                            quizScore.percentage >= 70 
+                              ? 'bg-gradient-to-r from-green-50 to-blue-50 border-green-200' 
+                              : 'bg-gradient-to-r from-red-50 to-orange-50 border-red-200'
+                          }`}>
+                            <CardContent className="p-4 lg:p-6 text-center">
                               <div className="flex items-center justify-center gap-2 mb-3">
-                                <Award className="h-6 w-6 text-blue-600" />
-                                <h4 className="text-lg font-semibold text-slate-800">Quiz Complete!</h4>
+                                <Award className={`h-5 w-5 lg:h-6 lg:w-6 ${
+                                  quizScore.percentage >= 70 ? 'text-green-600' : 'text-red-600'
+                                }`} />
+                                <h4 className="text-lg font-semibold text-slate-800">Quiz Results</h4>
                               </div>
-                              <p className="text-slate-600 mb-4">
-                                You've completed the knowledge check. Review the explanations above to reinforce your learning.
+                              <p className="text-2xl lg:text-3xl font-bold mb-2">
+                                {quizScore.correct}/{quizScore.total} ({quizScore.percentage}%)
                               </p>
-                              <div className="flex items-center justify-center gap-4">
-                                <Badge variant="outline" className="px-4 py-2">
-                                  <Users className="h-4 w-4 mr-1" />
-                                  {Object.keys(quizAnswers).length} Questions Answered
-                                </Badge>
-                                <Badge variant="outline" className="px-4 py-2">
-                                  <TrendingUp className="h-4 w-4 mr-1" />
-                                  Learning Progress Updated
-                                </Badge>
-                              </div>
+                              <p className={`text-sm lg:text-base mb-4 ${
+                                quizScore.percentage >= 70 ? 'text-green-700' : 'text-red-700'
+                              }`}>
+                                {quizScore.percentage >= 70 
+                                  ? "Excellent work! You've mastered this topic." 
+                                  : "Keep studying! Review the explanations above."
+                                }
+                              </p>
+                              {canRetakeQuiz && (
+                                <Button 
+                                  onClick={retakeQuiz}
+                                  variant="outline"
+                                  className="bg-white hover:bg-slate-50"
+                                >
+                                  <RotateCw className="h-4 w-4 mr-2" />
+                                  Retake Quiz
+                                </Button>
+                              )}
                             </CardContent>
                           </Card>
                         )}
