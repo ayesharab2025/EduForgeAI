@@ -611,8 +611,10 @@ async def generate_video(request: VideoRequest, background_tasks: BackgroundTask
         if not script:
             raise HTTPException(status_code=400, detail="No video script found")
         
+        topic = content.get('topic', 'Educational Content')
+        
         # Create video
-        video_path = await create_video_from_script(script, request.content_id)
+        video_path = await create_enhanced_video_from_script(script, topic, request.content_id)
         
         # Store video path in database
         await db.educational_content.update_one(
