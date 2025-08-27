@@ -298,6 +298,251 @@ async def create_video_from_script(script: str, content_id: str) -> str:
         raise HTTPException(status_code=500, detail=f"Failed to create video: {str(e)}")
 
 
+async def create_enhanced_video_from_script(script: str, topic: str, content_id: str) -> str:
+    """Create enhanced AI-powered video from script using TTS and AI-generated visuals"""
+    try:
+        # Create TTS audio with better quality
+        tts = gTTS(text=script, lang='en', slow=False, tld='com')
+        audio_file = tempfile.NamedTemporaryFile(suffix='.mp3', delete=False)
+        tts.save(audio_file.name)
+        
+        # Generate AI-enhanced content for visuals using Groq
+        visual_prompt = f"""Generate detailed visual descriptions for an educational video about {topic}. 
+        Create 4-6 scene descriptions that would make engaging slides. Each description should be visual, specific, and educational.
+        
+        Script: {script[:500]}...
+        
+        Return only a JSON array of visual descriptions:
+        ["Scene 1 description", "Scene 2 description", ...]
+        """
+        
+        try:
+            visual_response = groq_client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": "You are a visual content creator for educational videos. Generate engaging scene descriptions."},
+                    {"role": "user", "content": visual_prompt}
+                ],
+                model="llama3-8b-8192",
+                temperature=0.8,
+                max_tokens=1000
+            )
+            
+            visual_content = visual_response.choices[0].message.content
+            # Extract JSON array
+            start_idx = visual_content.find('[')
+            end_idx = visual_content.rfind(']') + 1
+            if start_idx != -1 and end_idx != -1:
+                visual_descriptions = json.loads(visual_content[start_idx:end_idx])
+            else:
+                # Fallback to script-based slides
+                visual_descriptions = [f"Educational content about {topic}" for _ in range(4)]
+                
+        except Exception as e:
+            logging.warning(f"Failed to generate visual descriptions: {e}")
+            visual_descriptions = [f"Educational content about {topic}" for _ in range(4)]
+        
+        # Create enhanced slide images with animations
+        slides = []
+        for i, description in enumerate(visual_descriptions[:6]):
+            slide_path = create_enhanced_slide_image(
+                description, 
+                topic,
+                i + 1, 
+                len(visual_descriptions[:6])
+            )
+            slides.append(slide_path)
+        
+        if not slides:
+            # Fallback slide
+            slide_path = create_enhanced_slide_image(f"Learning about {topic}", topic, 1, 1)
+            slides.append(slide_path)
+        
+        # Load audio clip
+        audio_clip = AudioFileClip(audio_file.name)
+        duration_per_slide = audio_clip.duration / len(slides)
+        
+        # Create video clips with transitions and effects
+        video_clips = []
+        for i, slide_path in enumerate(slides):
+            # Create image clip with Ken Burns effect (zoom + pan)
+            img_clip = ImageClip(slide_path, duration=duration_per_slide)
+            
+            # Add Ken Burns effect (slight zoom and pan)
+            if i % 2 == 0:
+                # Zoom in effect
+                img_clip = img_clip.resize(lambda t: 1 + 0.02 * t)  # Gradual zoom
+            else:
+                # Zoom out effect  
+                img_clip = img_clip.resize(lambda t: 1.02 - 0.02 * t)  # Gradual zoom out
+            
+            # Add fade transitions
+            if i > 0:
+                img_clip = img_clip.fadein(0.5)
+            if i < len(slides) - 1:
+                img_clip = img_clip.fadeout(0.5)
+                
+            video_clips.append(img_clip)
+        
+        # Concatenate video clips with crossfade transitions
+        if len(video_clips) > 1:
+            final_video = video_clips[0]
+            for clip in video_clips[1:]:
+                final_video = final_video.crossfadeout(0.5).crossfadein(0.5, clip)
+        else:
+            final_video = video_clips[0]
+            
+        # Add audio
+        final_video = final_video.with_audio(audio_clip)
+        
+        # Save video with better quality settings
+        video_file = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False)
+        final_video.write_videofile(
+            video_file.name,
+            fps=30,  # Higher FPS for smoother video
+            audio_codec='aac',
+            video_codec='libx264',
+            logger=None,
+            temp_audiofile_path=tempfile.mkdtemp(),
+            remove_temp=True
+        )
+        
+        # Cleanup
+        os.unlink(audio_file.name)
+        for slide_path in slides:
+            try:
+                os.unlink(slide_path)
+            except:
+                pass
+        
+        return video_file.name
+        
+    except Exception as e:
+        logging.error(f"Error creating enhanced video: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create video: {str(e)}")
+
+
+def create_enhanced_slide_image(description: str, topic: str, slide_number: int, total_slides: int, width: int = 1920, height: int = 1080) -> str:
+    """Create enhanced slide image with better design and AI-generated content"""
+    # Create image with sophisticated gradient background
+    img = Image.new('RGB', (width, height), color=(15, 23, 42))  # Dark slate background
+    draw = ImageDraw.Draw(img)
+    
+    # Create multi-layer gradient background
+    for i in range(height):
+        # Base gradient
+        r = int(15 + (45 - 15) * i / height)
+        g = int(23 + (55 - 23) * i / height) 
+        b = int(42 + (82 - 42) * i / height)
+        
+        # Add some color variation based on topic
+        topic_lower = topic.lower()
+        if 'science' in topic_lower or 'physics' in topic_lower:
+            g = min(255, g + 20)  # More green for science
+        elif 'math' in topic_lower or 'programming' in topic_lower:
+            b = min(255, b + 30)  # More blue for tech
+        elif 'history' in topic_lower or 'literature' in topic_lower:
+            r = min(255, r + 25)  # More red for humanities
+            
+        draw.line([(0, i), (width, i)], fill=(r, g, b))
+    
+    # Add decorative elements
+    # Top accent bar
+    accent_color = (99, 102, 241)  # Indigo accent
+    draw.rectangle([(0, 0), (width, 8)], fill=accent_color)
+    
+    # Side accent
+    draw.rectangle([(0, 0), (12, height)], fill=accent_color)
+    
+    # Load fonts with fallbacks
+    title_font_size = 72
+    text_font_size = 36
+    small_font_size = 28
+    
+    try:
+        title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", title_font_size)
+        text_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", text_font_size)
+        small_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", small_font_size)
+    except:
+        title_font = ImageFont.load_default()
+        text_font = ImageFont.load_default()
+        small_font = ImageFont.load_default()
+    
+    # Draw topic title at top
+    topic_text = topic.upper()
+    topic_bbox = draw.textbbox((0, 0), topic_text, font=title_font)
+    topic_width = topic_bbox[2] - topic_bbox[0]
+    topic_x = (width - topic_width) // 2
+    
+    # Add shadow effect for title
+    draw.text((topic_x + 2, 82), topic_text, fill=(0, 0, 0, 100), font=title_font)  # Shadow
+    draw.text((topic_x, 80), topic_text, fill=(255, 255, 255), font=title_font)  # Main text
+    
+    # Draw main description with better formatting
+    words = description.split()
+    lines = []
+    current_line = []
+    max_width = width - 200  # Margins
+    
+    for word in words:
+        test_line = ' '.join(current_line + [word])
+        bbox = draw.textbbox((0, 0), test_line, font=text_font)
+        if bbox[2] - bbox[0] < max_width:
+            current_line.append(word)
+        else:
+            if current_line:
+                lines.append(' '.join(current_line))
+            current_line = [word]
+    
+    if current_line:
+        lines.append(' '.join(current_line))
+    
+    # Position main text in center
+    total_text_height = len(lines) * 50
+    start_y = (height - total_text_height) // 2 + 50
+    
+    for i, line in enumerate(lines):
+        bbox = draw.textbbox((0, 0), line, font=text_font)
+        line_width = bbox[2] - bbox[0]
+        x = (width - line_width) // 2
+        y = start_y + i * 50
+        
+        # Add subtle shadow
+        draw.text((x + 1, y + 1), line, fill=(0, 0, 0, 80), font=text_font)
+        draw.text((x, y), line, fill=(255, 255, 255), font=text_font)
+    
+    # Add slide counter with better styling
+    counter_text = f"{slide_number} / {total_slides}"
+    counter_bbox = draw.textbbox((0, 0), counter_text, font=small_font)
+    counter_width = counter_bbox[2] - counter_bbox[0]
+    
+    # Counter background
+    counter_bg_x1 = width - counter_width - 60
+    counter_bg_y1 = height - 80
+    counter_bg_x2 = width - 20
+    counter_bg_y2 = height - 20
+    draw.rounded_rectangle(
+        [(counter_bg_x1, counter_bg_y1), (counter_bg_x2, counter_bg_y2)], 
+        radius=15, 
+        fill=(0, 0, 0, 100)
+    )
+    
+    counter_x = width - counter_width - 40
+    counter_y = height - 60
+    draw.text((counter_x, counter_y), counter_text, fill=(200, 200, 200), font=small_font)
+    
+    # Add subtle branding
+    brand_text = "EduForge AI"
+    brand_bbox = draw.textbbox((0, 0), brand_text, font=small_font)
+    brand_x = 40
+    brand_y = height - 60
+    draw.text((brand_x, brand_y), brand_text, fill=(150, 150, 150), font=small_font)
+    
+    # Save to temp file
+    temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+    img.save(temp_file.name, optimize=True, quality=95)
+    return temp_file.name
+
+
 # Routes
 @api_router.get("/")
 async def root():
