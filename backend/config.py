@@ -57,5 +57,11 @@ LEARNING_STYLES = {
         "video_style": "demonstration-focused with step-by-step practical examples",
         "quiz_style": "interactive and simulation-based questions with practical scenarios",
         "prompt_suffix": "Emphasize hands-on learning, practical examples, and interactive elements. Include 'try-it-yourself' activities and real-world applications."
+    },
+    "comprehensive": {
+        "content_emphasis": "multi-modal content combining visual, auditory, and practical elements",
+        "video_style": "balanced approach with visuals, clear narration, and practical examples",
+        "quiz_style": "diverse question types covering multiple learning approaches",
+        "prompt_suffix": "Create comprehensive content that appeals to all learning styles. Include visual elements, clear explanations, practical examples, and interactive components."
     }
 }
