@@ -15,7 +15,7 @@ import tempfile
 import asyncio
 from groq import Groq
 from gtts import gTTS
-from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, TextClip, concatenate_videoclips
+from moviepy import ImageClip, AudioFileClip, CompositeVideoClip, TextClip, concatenate_videoclips
 from PIL import Image, ImageDraw, ImageFont
 import io
 import base64
