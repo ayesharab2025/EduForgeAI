@@ -17,7 +17,6 @@ import {
   Video, 
   HelpCircle, 
   RotateCw, 
-  Play, 
   Sparkles,
   Target,
   Clock,
@@ -25,7 +24,8 @@ import {
   TrendingUp,
   Award,
   Zap,
-  Lightbulb
+  Lightbulb,
+  X
 } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import ChatBot from "./components/ChatBot";
@@ -36,8 +36,7 @@ const API = `${BACKEND_URL}/api`;
 function App() {
   const [formData, setFormData] = useState({
     topic: "",
-    learner_level: "",
-    learning_style: ""
+    learner_level: ""
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedContent, setGeneratedContent] = useState(null);
@@ -48,43 +47,18 @@ function App() {
   const [videoUrl, setVideoUrl] = useState(null);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [videoProgress, setVideoProgress] = useState(0);
+  const [quizScore, setQuizScore] = useState(null);
+  const [canRetakeQuiz, setCanRetakeQuiz] = useState(false);
 
   const steps = ["Content Generation", "Video Creation", "Ready to Learn"];
-
-  const learningStyleInfo = {
-    visual: {
-      icon: "👁️",
-      title: "Visual Learner",
-      description: "Learn best through images, diagrams, and visual aids",
-      features: ["Rich visual content", "Infographics & charts", "Color-coded materials", "Visual scene markers"]
-    },
-    auditory: {
-      icon: "👂",
-      title: "Auditory Learner", 
-      description: "Learn best through listening and discussion",
-      features: ["Detailed narration", "Dialogue-based content", "Audio explanations", "Discussion questions"]
-    },
-    reading: {
-      icon: "📚",
-      title: "Reading/Writing Learner",
-      description: "Learn best through text and written materials",
-      features: ["Comprehensive text", "Structured outlines", "Written summaries", "Reading materials"]
-    },
-    kinesthetic: {
-      icon: "✋",
-      title: "Kinesthetic Learner",
-      description: "Learn best through hands-on activities",
-      features: ["Interactive elements", "Practical examples", "Try-it-yourself tasks", "Real-world applications"]
-    }
-  };
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const generateContent = async () => {
-    if (!formData.topic || !formData.learner_level || !formData.learning_style) {
-      toast.error("Please fill in all fields to create your personalized learning experience");
+    if (!formData.topic || !formData.learner_level) {
+      toast.error("Please fill in all fields to create your learning experience");
       return;
     }
 
@@ -95,7 +69,12 @@ function App() {
     try {
       toast.info("🚀 Generating your personalized learning content...");
       
-      const response = await axios.post(`${API}/generate_content`, formData);
+      const requestData = {
+        ...formData,
+        learning_style: "comprehensive"  // Default style since we removed selection
+      };
+      
+      const response = await axios.post(`${API}/generate_content`, requestData);
       setGeneratedContent(response.data);
       setCurrentStep(1);
       
@@ -140,7 +119,7 @@ function App() {
       setCurrentStep(2);
       setIsGenerating(false);
       
-      toast.success("🎬 Your AI-powered educational video is ready!");
+      toast.success("🎬 Your educational video is ready!");
       
     } catch (error) {
       console.error("Error generating video:", error);
@@ -167,20 +146,31 @@ function App() {
   };
 
   const submitQuiz = () => {
-    setShowQuizResults(true);
     const correctAnswers = generatedContent.quiz.filter(
       (q) => quizAnswers[q.id] === q.correct_answer
     ).length;
     
-    const percentage = Math.round((correctAnswers / generatedContent.quiz.length) * 100);
+    const totalQuestions = generatedContent.quiz.length;
+    const percentage = Math.round((correctAnswers / totalQuestions) * 100);
     
-    if (percentage >= 80) {
-      toast.success(`🎉 Excellent work! You scored ${correctAnswers}/${generatedContent.quiz.length} (${percentage}%)`);
-    } else if (percentage >= 60) {
-      toast.success(`👏 Good job! You scored ${correctAnswers}/${generatedContent.quiz.length} (${percentage}%)`);
+    setQuizScore({ correct: correctAnswers, total: totalQuestions, percentage });
+    setShowQuizResults(true);
+    
+    if (percentage >= 70) {
+      toast.success(`🎉 Excellent! You scored ${correctAnswers}/${totalQuestions} (${percentage}%)`);
+      setCanRetakeQuiz(false);
     } else {
-      toast.info(`📚 You scored ${correctAnswers}/${generatedContent.quiz.length} (${percentage}%). Review the explanations and try again!`);
+      toast.error(`📚 You scored ${correctAnswers}/${totalQuestions} (${percentage}%). Review the explanations and try again!`);
+      setCanRetakeQuiz(true);
     }
+  };
+
+  const retakeQuiz = () => {
+    setQuizAnswers({});
+    setShowQuizResults(false);
+    setQuizScore(null);
+    setCanRetakeQuiz(false);
+    toast.info("Quiz reset! Try again with the knowledge you've gained.");
   };
 
   const toggleFlashcard = (cardId) => {
@@ -194,7 +184,7 @@ function App() {
   };
 
   const resetApp = () => {
-    setFormData({ topic: "", learner_level: "", learning_style: "" });
+    setFormData({ topic: "", learner_level: "" });
     setGeneratedContent(null);
     setCurrentStep(0);
     setQuizAnswers({});
@@ -203,6 +193,8 @@ function App() {
     setVideoUrl(null);
     setIsGeneratingVideo(false);
     setVideoProgress(0);
+    setQuizScore(null);
+    setCanRetakeQuiz(false);
     
     if (videoUrl) {
       URL.revokeObjectURL(videoUrl);
@@ -221,42 +213,42 @@ function App() {
   }, [isGeneratingVideo, videoProgress]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
       <Toaster position="top-center" expand={true} richColors />
       
-      <div className="container mx-auto px-6 py-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 lg:mb-12">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="relative">
-              <Brain className="h-12 w-12 text-blue-600" />
-              <Sparkles className="h-5 w-5 text-purple-500 absolute -top-1 -right-1" />
+              <Brain className="h-10 w-10 lg:h-12 lg:w-12 text-blue-600" />
+              <Sparkles className="h-4 w-4 lg:h-5 lg:w-5 text-purple-500 absolute -top-1 -right-1" />
             </div>
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
               EduForge AI
             </h1>
           </div>
-          <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed mb-6">
+          <p className="text-lg lg:text-xl text-slate-600 max-w-4xl mx-auto leading-relaxed mb-6">
             Transform any topic into a complete learning experience with AI-powered content generation, 
             interactive quizzes, personalized videos, and intelligent tutoring.
           </p>
           
           {/* Feature highlights */}
-          <div className="flex flex-wrap justify-center gap-4 mt-8">
-            <Badge variant="outline" className="px-4 py-2 text-sm">
-              <Zap className="h-4 w-4 mr-2 text-yellow-500" />
+          <div className="flex flex-wrap justify-center gap-2 lg:gap-4 mt-6 lg:mt-8">
+            <Badge variant="outline" className="px-3 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm">
+              <Zap className="h-3 w-3 lg:h-4 lg:w-4 mr-2 text-yellow-500" />
               AI-Powered Content
             </Badge>
-            <Badge variant="outline" className="px-4 py-2 text-sm">
-              <Target className="h-4 w-4 mr-2 text-green-500" />
+            <Badge variant="outline" className="px-3 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm">
+              <Target className="h-3 w-3 lg:h-4 lg:w-4 mr-2 text-green-500" />
               Personalized Learning
             </Badge>
-            <Badge variant="outline" className="px-4 py-2 text-sm">
-              <Award className="h-4 w-4 mr-2 text-purple-500" />
+            <Badge variant="outline" className="px-3 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm">
+              <Award className="h-3 w-3 lg:h-4 lg:w-4 mr-2 text-purple-500" />
               Interactive Quizzes
             </Badge>
-            <Badge variant="outline" className="px-4 py-2 text-sm">
-              <Video className="h-4 w-4 mr-2 text-blue-500" />
+            <Badge variant="outline" className="px-3 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm">
+              <Video className="h-3 w-3 lg:h-4 lg:w-4 mr-2 text-blue-500" />
               HD Video Generation
             </Badge>
           </div>
@@ -264,15 +256,15 @@ function App() {
 
         {!generatedContent ? (
           // Content Generation Form
-          <Card className="max-w-4xl mx-auto shadow-2xl border-0 bg-white/90 backdrop-blur-sm">
+          <Card className="w-full max-w-4xl mx-auto shadow-2xl border-0 bg-white/90 backdrop-blur-sm">
             <CardHeader className="text-center pb-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-lg">
-              <CardTitle className="text-3xl font-semibold text-slate-800">Create Your Learning Experience</CardTitle>
-              <CardDescription className="text-lg text-slate-600 mt-2">
-                Tell us what you want to learn and how you learn best. Our AI will create personalized content just for you.
+              <CardTitle className="text-2xl lg:text-3xl font-semibold text-slate-800">Create Your Learning Experience</CardTitle>
+              <CardDescription className="text-base lg:text-lg text-slate-600 mt-2">
+                Tell us what you want to learn. Our AI will create comprehensive educational content just for you.
               </CardDescription>
             </CardHeader>
             
-            <CardContent className="p-8 space-y-8">
+            <CardContent className="p-6 lg:p-8 space-y-6 lg:space-y-8">
               {/* Topic Input */}
               <div className="space-y-3">
                 <Label htmlFor="topic" className="text-base font-semibold text-slate-700">
@@ -280,7 +272,7 @@ function App() {
                 </Label>
                 <Input
                   id="topic"
-                  placeholder="e.g., Machine Learning, Quantum Physics, Spanish Grammar, Photography..."
+                  placeholder="e.g., Machine Learning, Quantum Physics, Spanish Grammar, Photography, Data Science..."
                   value={formData.topic}
                   onChange={(e) => handleInputChange("topic", e.target.value)}
                   className="text-base py-4 px-4 border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 bg-white"
@@ -331,48 +323,11 @@ function App() {
                 </Select>
               </div>
 
-              {/* Learning Style */}
-              <div className="space-y-4">
-                <Label className="text-base font-semibold text-slate-700">
-                  How do you learn best? 🧠
-                </Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(learningStyleInfo).map(([key, info]) => (
-                    <Card 
-                      key={key}
-                      className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                        formData.learning_style === key 
-                          ? 'ring-2 ring-blue-500 bg-blue-50' 
-                          : 'hover:bg-slate-50'
-                      }`}
-                      onClick={() => handleInputChange("learning_style", key)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          <div className="text-2xl">{info.icon}</div>
-                          <div className="flex-1">
-                            <div className="font-semibold text-slate-800">{info.title}</div>
-                            <p className="text-sm text-slate-600 mb-2">{info.description}</p>
-                            <div className="flex flex-wrap gap-1">
-                              {info.features.slice(0, 2).map((feature, idx) => (
-                                <Badge key={idx} variant="secondary" className="text-xs">
-                                  {feature}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-
               {/* Generate Button */}
               <div className="pt-4">
                 <Button 
                   onClick={generateContent} 
-                  disabled={isGenerating || !formData.topic || !formData.learner_level || !formData.learning_style}
+                  disabled={isGenerating || !formData.topic || !formData.learner_level}
                   className="w-full py-6 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg transition-all duration-200 transform hover:scale-[1.02] disabled:transform-none"
                 >
                   {isGenerating ? (
@@ -398,17 +353,17 @@ function App() {
           </Card>
         ) : (
           // Generated Content Display
-          <div className="space-y-8">
+          <div className="w-full space-y-6 lg:space-y-8">
             {/* Progress Indicator */}
-            <Card className="max-w-5xl mx-auto shadow-lg border-0 bg-white/95 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-semibold text-slate-800">Learning Experience Progress</h3>
+            <Card className="w-full shadow-lg border-0 bg-white/95 backdrop-blur-sm">
+              <CardContent className="p-4 lg:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                  <h3 className="text-lg lg:text-xl font-semibold text-slate-800">Learning Experience Progress</h3>
                   <Button 
                     onClick={resetApp} 
                     variant="outline" 
                     size="sm"
-                    className="text-slate-600 hover:text-slate-800"
+                    className="text-slate-600 hover:text-slate-800 w-full sm:w-auto"
                   >
                     <RotateCw className="h-4 w-4 mr-2" />
                     Create New Experience
@@ -416,27 +371,27 @@ function App() {
                 </div>
                 
                 {/* Steps Progress */}
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4 space-y-4 lg:space-y-0">
                   {steps.map((step, index) => (
                     <div key={index} className="flex items-center">
-                      <div className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-colors ${
+                      <div className={`flex items-center justify-center w-10 h-10 lg:w-12 lg:h-12 rounded-full border-2 transition-colors ${
                         currentStep > index 
                           ? 'bg-green-500 border-green-500 text-white shadow-lg' 
                           : currentStep === index 
                           ? 'bg-blue-500 border-blue-500 text-white animate-pulse shadow-lg' 
                           : 'border-slate-300 text-slate-400 bg-white'
                       }`}>
-                        {currentStep > index ? <CheckCircle2 className="h-6 w-6" /> : index + 1}
+                        {currentStep > index ? <CheckCircle2 className="h-5 w-5 lg:h-6 lg:w-6" /> : index + 1}
                       </div>
                       <div className="ml-3">
-                        <span className={`text-sm font-medium ${
+                        <span className={`text-sm lg:text-base font-medium ${
                           currentStep >= index ? 'text-slate-800' : 'text-slate-400'
                         }`}>
                           {step}
                         </span>
                       </div>
                       {index < steps.length - 1 && (
-                        <div className={`w-24 h-1 mx-6 rounded-full ${
+                        <div className={`hidden lg:block w-20 xl:w-24 h-1 mx-6 rounded-full ${
                           currentStep > index ? 'bg-green-500' : 'bg-slate-200'
                         }`} />
                       )}
@@ -447,18 +402,18 @@ function App() {
                 {/* Progress Details */}
                 {(isGenerating || isGeneratingVideo) && (
                   <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
                         <RotateCw className="h-4 w-4 text-white animate-spin" />
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <p className="font-semibold text-slate-800">
-                          {isGeneratingVideo ? "🎬 Creating AI-Powered Video" : "🤖 Generating Content"}
+                          {isGeneratingVideo ? "🎬 Creating Educational Video" : "🤖 Generating Content"}
                         </p>
                         <p className="text-sm text-slate-600">
                           {isGeneratingVideo 
-                            ? "Using AI to create personalized educational video with narration..." 
-                            : "Analyzing your preferences and creating personalized learning materials..."
+                            ? "Creating personalized educational video with narration..." 
+                            : "Analyzing your topic and creating comprehensive learning materials..."
                           }
                         </p>
                       </div>
@@ -473,13 +428,13 @@ function App() {
                       <div className="text-xs text-slate-600 space-y-1">
                         <p>✅ Content generated with learning objectives, quiz, and flashcards</p>
                         <p className={videoProgress > 30 ? "text-green-600" : ""}>
-                          {videoProgress > 30 ? "✅" : "⏳"} AI visual scenes created using advanced algorithms
+                          {videoProgress > 30 ? "✅" : "⏳"} Video scenes created
                         </p>
                         <p className={videoProgress > 60 ? "text-green-600" : ""}>
-                          {videoProgress > 60 ? "✅" : "⏳"} Professional narration with high-quality TTS
+                          {videoProgress > 60 ? "✅" : "⏳"} Audio narration generated
                         </p>
                         <p className={videoProgress > 80 ? "text-green-600" : ""}>
-                          {videoProgress > 80 ? "✅" : "⏳"} HD video compilation with animations
+                          {videoProgress > 80 ? "✅" : "⏳"} HD video compilation complete
                         </p>
                       </div>
                     )}
