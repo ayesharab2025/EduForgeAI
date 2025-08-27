@@ -181,6 +181,10 @@ Generate 5 quiz questions and 8 flashcards. Ensure content is appropriate for {l
         
         content_text = response.choices[0].message.content
         
+        # Clean the content text to remove control characters
+        import re
+        content_text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', content_text)
+        
         # Parse JSON from response
         start_idx = content_text.find('{')
         end_idx = content_text.rfind('}') + 1
