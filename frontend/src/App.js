@@ -596,15 +596,15 @@ function App() {
                       )}
 
                       {/* Quiz Questions */}
-                      <div className="space-y-6 max-w-4xl mx-auto">
+                      <div className="space-y-4 lg:space-y-6 w-full">
                         {generatedContent.quiz?.map((question, qIndex) => (
                           <Card key={question.id || qIndex} className="border shadow-sm">
                             <CardHeader className="pb-4">
                               <div className="flex items-start gap-3">
-                                <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                                <div className="flex-shrink-0 w-6 h-6 lg:w-8 lg:h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-semibold text-xs lg:text-sm">
                                   {qIndex + 1}
                                 </div>
-                                <CardTitle className="text-lg text-slate-800 leading-relaxed">
+                                <CardTitle className="text-base lg:text-lg text-slate-800 leading-relaxed">
                                   {question.question}
                                 </CardTitle>
                               </div>
@@ -615,7 +615,7 @@ function App() {
                                   <button
                                     onClick={() => !showQuizResults && handleQuizAnswer(question.id || `q_${qIndex}`, oIndex)}
                                     disabled={showQuizResults}
-                                    className={`w-full text-left p-4 rounded-lg border transition-all duration-200 ${
+                                    className={`w-full text-left p-3 lg:p-4 rounded-lg border transition-all duration-200 ${
                                       showQuizResults
                                         ? oIndex === question.correct_answer
                                           ? 'bg-green-100 border-green-300 text-green-800 shadow-sm'
@@ -628,7 +628,7 @@ function App() {
                                     }`}
                                   >
                                     <div className="flex items-center gap-3">
-                                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-sm font-semibold ${
+                                      <div className={`w-5 h-5 lg:w-6 lg:h-6 rounded-full border-2 flex items-center justify-center text-xs lg:text-sm font-semibold ${
                                         showQuizResults && oIndex === question.correct_answer
                                           ? 'bg-green-500 text-white border-green-500'
                                           : showQuizResults && quizAnswers[question.id || `q_${qIndex}`] === oIndex && oIndex !== question.correct_answer
@@ -639,7 +639,7 @@ function App() {
                                       }`}>
                                         {String.fromCharCode(65 + oIndex)}
                                       </div>
-                                      <span className="leading-relaxed">{option}</span>
+                                      <span className="leading-relaxed text-sm lg:text-base">{option}</span>
                                     </div>
                                   </button>
                                 </div>
