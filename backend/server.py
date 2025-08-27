@@ -1,508 +1,149 @@
-from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks
+# EduForge AI - Enhanced FastAPI Server with Groq Integration
+from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import FileResponse
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
-from pathlib import Path
-from pydantic import BaseModel, Field
-from typing import List, Optional
-import uuid
-from datetime import datetime
-import json
-import tempfile
 import asyncio
-from groq import Groq
-from gtts import gTTS
-from moviepy import ImageClip, AudioFileClip, CompositeVideoClip, TextClip, concatenate_videoclips
-from PIL import Image, ImageDraw, ImageFont
-import io
-import base64
+from pathlib import Path
+from typing import List, Dict, Any
+from contextlib import asynccontextmanager
 
+# Local imports
+from .config import settings
+from .models import *
+from .services.groq_service import groq_service
+from .services.video_service import video_service
+from .services.chatbot_service import chatbot_service
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+client: AsyncIOMotorClient = None
+db = None
 
-# Groq client
-groq_client = Groq(api_key=os.environ['GROQ_API_KEY'])
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    global client, db
+    client = AsyncIOMotorClient(settings.MONGO_URL)
+    db = client[settings.DB_NAME]
+    
+    # Test database connection
+    try:
+        await client.admin.command('ping')
+        logger.info("Successfully connected to MongoDB")
+    except Exception as e:
+        logger.error(f"Failed to connect to MongoDB: {e}")
+    
+    # Create video output directory
+    Path(settings.VIDEO_OUTPUT_DIR).mkdir(exist_ok=True)
+    
+    yield
+    
+    # Shutdown
+    if client:
+        client.close()
 
-# Create the main app without a prefix
-app = FastAPI()
+# Create FastAPI app
+app = FastAPI(
+    title="EduForge AI API",
+    description="AI-powered educational content generation platform",
+    version="2.0.0",
+    lifespan=lifespan
+)
 
-# Create a router with the /api prefix
+# Create API router
 api_router = APIRouter(prefix="/api")
 
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=settings.CORS_ORIGINS.split(',') if settings.CORS_ORIGINS != "*" else ["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Define Models
-class ContentRequest(BaseModel):
-    topic: str
-    learner_level: str  # beginner, intermediate, advanced
-    learning_style: str  # visual, auditory, kinesthetic, reading
+# Dependency to get database
+async def get_database():
+    return db
 
-class QuizQuestion(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    question: str
-    options: List[str]
-    correct_answer: int
-    explanation: str
-
-class Flashcard(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    front: str
-    back: str
-
-class EducationalContent(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    topic: str
-    learner_level: str
-    learning_style: str
-    learning_objectives: List[str]
-    video_script: str
-    quiz: List[QuizQuestion]
-    flashcards: List[Flashcard]
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-
-class VideoRequest(BaseModel):
-    content_id: str
-
-class StatusCheck(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-
-def create_slide_image(text: str, slide_number: int, total_slides: int, width: int = 1280, height: int = 720) -> str:
-    """Create a slide image with text"""
-    # Create image with gradient background
-    img = Image.new('RGB', (width, height), color=(45, 55, 72))
-    draw = ImageDraw.Draw(img)
-    
-    # Add gradient effect
-    for i in range(height):
-        r = int(45 + (70 - 45) * i / height)
-        g = int(55 + (90 - 55) * i / height) 
-        b = int(72 + (120 - 72) * i / height)
-        draw.line([(0, i), (width, i)], fill=(r, g, b))
-    
-    # Add text
+# Helper function to clean up video files
+async def cleanup_video_file(file_path: str, delay: int):
+    """Clean up video file after delay"""
+    await asyncio.sleep(delay)
     try:
-        font_size = 48
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-    except:
-        font = ImageFont.load_default()
-    
-    # Word wrap text
-    words = text.split()
-    lines = []
-    current_line = []
-    
-    for word in words:
-        test_line = ' '.join(current_line + [word])
-        bbox = draw.textbbox((0, 0), test_line, font=font)
-        if bbox[2] - bbox[0] < width - 100:
-            current_line.append(word)
-        else:
-            if current_line:
-                lines.append(' '.join(current_line))
-            current_line = [word]
-    
-    if current_line:
-        lines.append(' '.join(current_line))
-    
-    # Draw text lines
-    y_offset = height // 2 - (len(lines) * 60) // 2
-    for line in lines:
-        bbox = draw.textbbox((0, 0), line, font=font)
-        text_width = bbox[2] - bbox[0]
-        x = (width - text_width) // 2
-        draw.text((x, y_offset), line, fill=(255, 255, 255), font=font)
-        y_offset += 60
-    
-    # Add slide number
-    slide_text = f"{slide_number}/{total_slides}"
-    draw.text((width - 150, height - 50), slide_text, fill=(200, 200, 200), font=font)
-    
-    # Save to temp file
-    temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-    img.save(temp_file.name)
-    return temp_file.name
-
-
-async def generate_content_with_groq(topic: str, learner_level: str, learning_style: str) -> dict:
-    """Generate educational content using Groq"""
-    
-    system_prompt = f"""You are an expert educational content creator. Generate comprehensive learning content based on the given parameters.
-
-Topic: {topic}
-Learner Level: {learner_level}
-Learning Style: {learning_style}
-
-Generate a JSON response with the following structure:
-{{
-  "learning_objectives": [list of 3-5 clear learning objectives],
-  "video_script": "A detailed script for a 2-3 minute educational video. Include narration that explains the topic clearly with examples. Make it engaging and appropriate for {learner_level} level.",
-  "quiz": [
-    {{
-      "question": "Multiple choice question text",
-      "options": ["option1", "option2", "option3", "option4"],
-      "correct_answer": 0,
-      "explanation": "Explanation of why this is correct"
-    }}
-  ],
-  "flashcards": [
-    {{
-      "front": "Question or term",
-      "back": "Answer or definition"
-    }}
-  ]
-}}
-
-Generate 5 quiz questions and 8 flashcards. Ensure content is appropriate for {learner_level} learners and optimized for {learning_style} learning style."""
-
-    try:
-        response = groq_client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Generate educational content for: {topic}"}
-            ],
-            model="llama3-8b-8192",
-            temperature=0.7,
-            max_tokens=4000
-        )
-        
-        content_text = response.choices[0].message.content
-        
-        # Clean the content text to remove control characters and markdown
-        import re
-        content_text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', content_text)
-        
-        # Remove markdown code blocks if present
-        content_text = re.sub(r'```json\s*', '', content_text)
-        content_text = re.sub(r'```\s*', '', content_text)
-        content_text = re.sub(r'Here is.*?:', '', content_text)
-        
-        # Find JSON in the response - look for the first complete JSON object
-        try:
-            # Try to find JSON block
-            start_idx = content_text.find('{')
-            if start_idx == -1:
-                raise ValueError("No JSON object found in response")
-            
-            # Find the matching closing brace
-            brace_count = 0
-            end_idx = start_idx
-            for i, char in enumerate(content_text[start_idx:], start_idx):
-                if char == '{':
-                    brace_count += 1
-                elif char == '}':
-                    brace_count -= 1
-                    if brace_count == 0:
-                        end_idx = i + 1
-                        break
-            
-            json_str = content_text[start_idx:end_idx]
-            return json.loads(json_str)
-            
-        except (json.JSONDecodeError, ValueError) as e:
-            # If JSON parsing fails, log the content and try a fallback
-            logging.error(f"JSON parsing failed: {e}")
-            logging.error(f"Content received: {content_text[:1000]}...")
-            
-            # Fallback: create a basic structure
-            return {
-                "learning_objectives": ["Understand the basics of the topic", "Apply key concepts", "Practice problem-solving"],
-                "video_script": "This is an educational video about the requested topic. The content will cover the fundamental concepts and provide practical examples.",
-                "quiz": [
-                    {
-                        "question": "What is the main concept discussed?",
-                        "options": ["Option A", "Option B", "Option C", "Option D"],
-                        "correct_answer": 0,
-                        "explanation": "This is the correct answer because..."
-                    }
-                ],
-                "flashcards": [
-                    {
-                        "front": "Key Term",
-                        "back": "Definition of the key term"
-                    }
-                ]
-            }
-    
+        if os.path.exists(file_path):
+            os.unlink(file_path)
+            logger.info(f"Cleaned up video file: {file_path}")
     except Exception as e:
-        logging.error(f"Error generating content: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate content: {str(e)}")
+        logger.error(f"Failed to cleanup video file {file_path}: {e}")
 
+# API Routes
 
-async def create_enhanced_video_from_script(script: str, topic: str, content_id: str) -> str:
-    """Create enhanced AI-powered video from script using TTS and AI-generated visuals"""
-    try:
-        # Create TTS audio with better quality
-        tts = gTTS(text=script, lang='en', slow=False, tld='com')
-        audio_file = tempfile.NamedTemporaryFile(suffix='.mp3', delete=False)
-        tts.save(audio_file.name)
-        
-        # Generate AI-enhanced content for visuals using Groq
-        visual_prompt = f"""Generate detailed visual descriptions for an educational video about {topic}. 
-        Create 4-6 scene descriptions that would make engaging slides. Each description should be visual, specific, and educational.
-        
-        Script: {script[:500]}...
-        
-        Return only a JSON array of visual descriptions:
-        ["Scene 1 description", "Scene 2 description", ...]
-        """
-        
-        try:
-            visual_response = groq_client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": "You are a visual content creator for educational videos. Generate engaging scene descriptions."},
-                    {"role": "user", "content": visual_prompt}
-                ],
-                model="llama3-8b-8192",
-                temperature=0.8,
-                max_tokens=1000
-            )
-            
-            visual_content = visual_response.choices[0].message.content
-            # Extract JSON array
-            start_idx = visual_content.find('[')
-            end_idx = visual_content.rfind(']') + 1
-            if start_idx != -1 and end_idx != -1:
-                visual_descriptions = json.loads(visual_content[start_idx:end_idx])
-            else:
-                # Fallback to script-based slides
-                visual_descriptions = [f"Educational content about {topic}" for _ in range(4)]
-                
-        except Exception as e:
-            logging.warning(f"Failed to generate visual descriptions: {e}")
-            visual_descriptions = [f"Educational content about {topic}" for _ in range(4)]
-        
-        # Create enhanced slide images with animations
-        slides = []
-        for i, description in enumerate(visual_descriptions[:6]):
-            slide_path = create_enhanced_slide_image(
-                description, 
-                topic,
-                i + 1, 
-                len(visual_descriptions[:6])
-            )
-            slides.append(slide_path)
-        
-        if not slides:
-            # Fallback slide
-            slide_path = create_enhanced_slide_image(f"Learning about {topic}", topic, 1, 1)
-            slides.append(slide_path)
-        
-        # Load audio clip
-        audio_clip = AudioFileClip(audio_file.name)
-        duration_per_slide = audio_clip.duration / len(slides)
-        
-        # Create video clips with transitions and effects
-        video_clips = []
-        for i, slide_path in enumerate(slides):
-            # Create image clip with Ken Burns effect (zoom + pan)
-            img_clip = ImageClip(slide_path, duration=duration_per_slide)
-            
-            # Add Ken Burns effect (slight zoom and pan) using resizing
-            if i % 2 == 0:
-                # Zoom in effect - use resizing function
-                def zoom_in(get_frame, t):
-                    return img_clip.get_frame(t)
-                img_clip = img_clip.fl(lambda gf, t: img_clip.get_frame(t), apply_to=[])
-            else:
-                # Keep original for now due to MoviePy version compatibility
-                pass
-            
-            # Add fade transitions
-            if i > 0:
-                img_clip = img_clip.fadein(0.5)
-            if i < len(slides) - 1:
-                img_clip = img_clip.fadeout(0.5)
-                
-            video_clips.append(img_clip)
-        
-        # Concatenate video clips with crossfade transitions
-        if len(video_clips) > 1:
-            final_video = video_clips[0]
-            for clip in video_clips[1:]:
-                final_video = final_video.crossfadeout(0.5).crossfadein(0.5, clip)
-        else:
-            final_video = video_clips[0]
-            
-        # Add audio
-        final_video = final_video.with_audio(audio_clip)
-        
-        # Save video with better quality settings
-        video_file = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False)
-        final_video.write_videofile(
-            video_file.name,
-            fps=30,  # Higher FPS for smoother video
-            audio_codec='aac',
-            video_codec='libx264',
-            logger=None,
-            temp_audiofile_path=tempfile.mkdtemp(),
-            remove_temp=True
-        )
-        
-        # Cleanup
-        os.unlink(audio_file.name)
-        for slide_path in slides:
-            try:
-                os.unlink(slide_path)
-            except:
-                pass
-        
-        return video_file.name
-        
-    except Exception as e:
-        logging.error(f"Error creating enhanced video: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to create video: {str(e)}")
-
-
-def create_enhanced_slide_image(description: str, topic: str, slide_number: int, total_slides: int, width: int = 1920, height: int = 1080) -> str:
-    """Create enhanced slide image with better design and AI-generated content"""
-    # Create image with sophisticated gradient background
-    img = Image.new('RGB', (width, height), color=(15, 23, 42))  # Dark slate background
-    draw = ImageDraw.Draw(img)
-    
-    # Create multi-layer gradient background
-    for i in range(height):
-        # Base gradient
-        r = int(15 + (45 - 15) * i / height)
-        g = int(23 + (55 - 23) * i / height) 
-        b = int(42 + (82 - 42) * i / height)
-        
-        # Add some color variation based on topic
-        topic_lower = topic.lower()
-        if 'science' in topic_lower or 'physics' in topic_lower:
-            g = min(255, g + 20)  # More green for science
-        elif 'math' in topic_lower or 'programming' in topic_lower:
-            b = min(255, b + 30)  # More blue for tech
-        elif 'history' in topic_lower or 'literature' in topic_lower:
-            r = min(255, r + 25)  # More red for humanities
-            
-        draw.line([(0, i), (width, i)], fill=(r, g, b))
-    
-    # Add decorative elements
-    # Top accent bar
-    accent_color = (99, 102, 241)  # Indigo accent
-    draw.rectangle([(0, 0), (width, 8)], fill=accent_color)
-    
-    # Side accent
-    draw.rectangle([(0, 0), (12, height)], fill=accent_color)
-    
-    # Load fonts with fallbacks
-    title_font_size = 72
-    text_font_size = 36
-    small_font_size = 28
-    
-    try:
-        title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", title_font_size)
-        text_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", text_font_size)
-        small_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", small_font_size)
-    except:
-        title_font = ImageFont.load_default()
-        text_font = ImageFont.load_default()
-        small_font = ImageFont.load_default()
-    
-    # Draw topic title at top
-    topic_text = topic.upper()
-    topic_bbox = draw.textbbox((0, 0), topic_text, font=title_font)
-    topic_width = topic_bbox[2] - topic_bbox[0]
-    topic_x = (width - topic_width) // 2
-    
-    # Add shadow effect for title
-    draw.text((topic_x + 2, 82), topic_text, fill=(0, 0, 0, 100), font=title_font)  # Shadow
-    draw.text((topic_x, 80), topic_text, fill=(255, 255, 255), font=title_font)  # Main text
-    
-    # Draw main description with better formatting
-    words = description.split()
-    lines = []
-    current_line = []
-    max_width = width - 200  # Margins
-    
-    for word in words:
-        test_line = ' '.join(current_line + [word])
-        bbox = draw.textbbox((0, 0), test_line, font=text_font)
-        if bbox[2] - bbox[0] < max_width:
-            current_line.append(word)
-        else:
-            if current_line:
-                lines.append(' '.join(current_line))
-            current_line = [word]
-    
-    if current_line:
-        lines.append(' '.join(current_line))
-    
-    # Position main text in center
-    total_text_height = len(lines) * 50
-    start_y = (height - total_text_height) // 2 + 50
-    
-    for i, line in enumerate(lines):
-        bbox = draw.textbbox((0, 0), line, font=text_font)
-        line_width = bbox[2] - bbox[0]
-        x = (width - line_width) // 2
-        y = start_y + i * 50
-        
-        # Add subtle shadow
-        draw.text((x + 1, y + 1), line, fill=(0, 0, 0, 80), font=text_font)
-        draw.text((x, y), line, fill=(255, 255, 255), font=text_font)
-    
-    # Add slide counter with better styling
-    counter_text = f"{slide_number} / {total_slides}"
-    counter_bbox = draw.textbbox((0, 0), counter_text, font=small_font)
-    counter_width = counter_bbox[2] - counter_bbox[0]
-    
-    # Counter background
-    counter_bg_x1 = width - counter_width - 60
-    counter_bg_y1 = height - 80
-    counter_bg_x2 = width - 20
-    counter_bg_y2 = height - 20
-    draw.rounded_rectangle(
-        [(counter_bg_x1, counter_bg_y1), (counter_bg_x2, counter_bg_y2)], 
-        radius=15, 
-        fill=(0, 0, 0, 100)
-    )
-    
-    counter_x = width - counter_width - 40
-    counter_y = height - 60
-    draw.text((counter_x, counter_y), counter_text, fill=(200, 200, 200), font=small_font)
-    
-    # Add subtle branding
-    brand_text = "EduForge AI"
-    brand_bbox = draw.textbbox((0, 0), brand_text, font=small_font)
-    brand_x = 40
-    brand_y = height - 60
-    draw.text((brand_x, brand_y), brand_text, fill=(150, 150, 150), font=small_font)
-    
-    # Save to temp file
-    temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-    img.save(temp_file.name, optimize=True, quality=95)
-    return temp_file.name
-
-
-# Routes
 @api_router.get("/")
 async def root():
-    return {"message": "Educational Content Generator API"}
+    """API root endpoint"""
+    return {"message": "EduForge AI API v2.0 - Advanced Educational Content Generation"}
+
+@api_router.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Comprehensive health check endpoint"""
+    
+    # Check OpenSora availability
+    opensora_available = await video_service._is_opensora_available()
+    
+    # Get API key status
+    api_key_status = ApiKeyStatus(
+        current_key_index=groq_service.current_key_index,
+        request_count=groq_service.request_count,
+        total_keys=len(groq_service.api_keys),
+        max_requests_per_key=groq_service.max_requests_per_key
+    )
+    
+    # Get chatbot stats
+    chat_stats = chatbot_service.get_session_stats()
+    
+    return HealthResponse(
+        status="healthy",
+        groq_configured=len(groq_service.api_keys) > 0,
+        api_key_status=api_key_status,
+        opensora_available=opensora_available,
+        active_chat_sessions=chat_stats['active_sessions']
+    )
 
 @api_router.post("/generate_content", response_model=EducationalContent)
-async def generate_content(request: ContentRequest):
-    """Generate educational content based on topic, level, and learning style"""
+async def generate_content(
+    request: ContentRequest,
+    db=Depends(get_database)
+):
+    """Generate comprehensive educational content with learning style adaptation"""
+    
     try:
-        # Generate content using Groq
-        content_data = await generate_content_with_groq(
-            request.topic, 
-            request.learner_level, 
-            request.learning_style
+        logger.info(f"Generating content for topic: {request.topic}, level: {request.learner_level}, style: {request.learning_style}")
+        
+        # Validate learning style and level
+        valid_styles = ["visual", "auditory", "reading", "kinesthetic"]
+        valid_levels = ["beginner", "intermediate", "advanced"]
+        
+        if request.learning_style.lower() not in valid_styles:
+            raise HTTPException(status_code=400, detail=f"Invalid learning style. Must be one of: {valid_styles}")
+        
+        if request.learner_level.lower() not in valid_levels:
+            raise HTTPException(status_code=400, detail=f"Invalid learner level. Must be one of: {valid_levels}")
+        
+        # Generate content using Groq service
+        content_data = await groq_service.generate_educational_content(
+            topic=request.topic,
+            learner_level=request.learner_level.lower(),
+            learning_style=request.learning_style.lower()
         )
         
         # Create quiz questions
@@ -512,7 +153,8 @@ async def generate_content(request: ContentRequest):
                 question=q_data['question'],
                 options=q_data['options'],
                 correct_answer=q_data['correct_answer'],
-                explanation=q_data['explanation']
+                explanation=q_data['explanation'],
+                hint=q_data.get('hint', 'Think about the key concepts we discussed.')
             ))
         
         # Create flashcards
@@ -523,118 +165,276 @@ async def generate_content(request: ContentRequest):
                 back=f_data['back']
             ))
         
+        # Create UI suggestions
+        ui_suggestions = UIsuggestions(
+            color_scheme=content_data.get('ui_suggestions', {}).get('color_scheme', 'Blue and purple gradients for focus and creativity'),
+            layout_emphasis=content_data.get('ui_suggestions', {}).get('layout_emphasis', f'Optimized for {request.learning_style} learning'),
+            interaction_type=content_data.get('ui_suggestions', {}).get('interaction_type', f'Interactive elements for {request.learning_style} learners')
+        )
+        
         # Create educational content object
         content = EducationalContent(
             topic=request.topic,
-            learner_level=request.learner_level,
-            learning_style=request.learning_style,
+            learner_level=request.learner_level.lower(),
+            learning_style=request.learning_style.lower(),
             learning_objectives=content_data.get('learning_objectives', []),
             video_script=content_data.get('video_script', ''),
             quiz=quiz_questions,
-            flashcards=flashcards
+            flashcards=flashcards,
+            ui_suggestions=ui_suggestions
         )
         
         # Save to database
-        content_dict = content.dict()
+        content_dict = content.model_dump()
         await db.educational_content.insert_one(content_dict)
         
+        # Update chatbot context for this session
+        # Using content ID as session ID for context continuity
+        chatbot_service.update_learning_context(
+            session_id=content.id,
+            topic=request.topic,
+            learning_style=request.learning_style.lower(),
+            learner_level=request.learner_level.lower(),
+            learning_objectives=content.learning_objectives
+        )
+        
+        logger.info(f"Successfully generated content with ID: {content.id}")
         return content
         
+    except HTTPException:
+        raise
     except Exception as e:
-        logging.error(f"Error in generate_content: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error in generate_content: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Content generation failed: {str(e)}")
 
 @api_router.post("/generate_video")
-async def generate_video(request: VideoRequest, background_tasks: BackgroundTasks):
-    """Generate enhanced AI-powered video for the given content"""
+async def generate_video(
+    request: VideoRequest, 
+    background_tasks: BackgroundTasks,
+    db=Depends(get_database)
+):
+    """Generate AI-enhanced educational video"""
+    
     try:
+        logger.info(f"Starting video generation for content ID: {request.content_id}")
+        
         # Get content from database
         content = await db.educational_content.find_one({"id": request.content_id})
         if not content:
-            raise HTTPException(status_code=404, detail="Content not found")
+            raise HTTPException(status_code=404, detail="Educational content not found")
         
         script = content.get('video_script', '')
         topic = content.get('topic', 'Educational Content')
+        learning_style = content.get('learning_style', 'visual')
         
         if not script:
-            raise HTTPException(status_code=400, detail="No video script found")
+            raise HTTPException(status_code=400, detail="No video script found in content")
         
-        # Create enhanced video with AI-generated visuals
-        video_path = await create_enhanced_video_from_script(script, topic, request.content_id)
+        # Generate video using enhanced video service
+        video_path = await video_service.generate_video(
+            script=script,
+            topic=topic,
+            learning_style=learning_style,
+            content_id=request.content_id
+        )
         
-        # Store video path in database
+        # Update database with video path
         await db.educational_content.update_one(
             {"id": request.content_id},
             {"$set": {"video_path": video_path}}
         )
         
-        # Schedule cleanup after 1 hour
-        background_tasks.add_task(cleanup_video_file, video_path, 3600)
+        # Schedule cleanup after 2 hours
+        background_tasks.add_task(cleanup_video_file, video_path, 7200)
+        
+        logger.info(f"Successfully generated video: {video_path}")
         
         return FileResponse(
             video_path,
             media_type="video/mp4",
-            filename=f"eduforge_video_{request.content_id}.mp4"
+            filename=f"eduforge_video_{request.content_id}.mp4",
+            headers={"Content-Disposition": f"attachment; filename=eduforge_video_{request.content_id}.mp4"}
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
-        logging.error(f"Error in generate_video: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error in generate_video: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Video generation failed: {str(e)}")
 
 @api_router.get("/content/{content_id}", response_model=EducationalContent)
-async def get_content(content_id: str):
-    """Get educational content by ID"""
+async def get_content(content_id: str, db=Depends(get_database)):
+    """Retrieve educational content by ID"""
+    
     content = await db.educational_content.find_one({"id": content_id})
     if not content:
-        raise HTTPException(status_code=404, detail="Content not found")
+        raise HTTPException(status_code=404, detail="Educational content not found")
     
     return EducationalContent(**content)
 
-@api_router.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "groq_configured": bool(os.environ.get('GROQ_API_KEY'))}
+@api_router.get("/video_status/{content_id}")
+async def get_video_status(content_id: str, db=Depends(get_database)):
+    """Get video generation status"""
+    
+    content = await db.educational_content.find_one({"id": content_id})
+    if not content:
+        raise HTTPException(status_code=404, detail="Educational content not found")
+    
+    video_path = content.get('video_path')
+    
+    if video_path and os.path.exists(video_path):
+        return VideoGenerationStatus(
+            status="completed",
+            message="Video generation completed successfully",
+            progress_percentage=100
+        )
+    else:
+        return VideoGenerationStatus(
+            status="processing", 
+            message="Video generation in progress...",
+            estimated_time="1-3 minutes",
+            progress_percentage=50
+        )
 
-async def cleanup_video_file(file_path: str, delay: int):
-    """Clean up video file after delay"""
-    await asyncio.sleep(delay)
+# Chatbot endpoints
+@api_router.post("/chat", response_model=ChatResponse)
+async def chat_with_bot(request: ChatRequest):
+    """Chat with the educational AI assistant"""
+    
     try:
-        if os.path.exists(file_path):
-            os.unlink(file_path)
+        response = await chatbot_service.chat(
+            session_id=request.session_id,
+            message=request.message,
+            context=request.context
+        )
+        
+        return ChatResponse(**response)
+        
     except Exception as e:
-        logging.error(f"Failed to cleanup video file {file_path}: {e}")
+        logger.error(f"Error in chat: {str(e)}")
+        return ChatResponse(
+            response="I apologize, but I'm experiencing technical difficulties. Please try again.",
+            session_id=request.session_id,
+            timestamp=datetime.utcnow().isoformat(),
+            error=True
+        )
 
-# Legacy routes
+@api_router.post("/chat/summarize", response_model=ChatResponse)
+async def summarize_topic(request: SummarizeRequest):
+    """Get topic summary from the AI assistant"""
+    
+    try:
+        response = await chatbot_service.summarize_topic(
+            session_id=request.session_id,
+            topic=request.topic,
+            detail_level=request.detail_level
+        )
+        
+        return ChatResponse(**response)
+        
+    except Exception as e:
+        logger.error(f"Error in summarize: {str(e)}")
+        return ChatResponse(
+            response=f"I'm having trouble generating a summary for {request.topic}. Please try again or ask me specific questions about the topic.",
+            session_id=request.session_id,
+            timestamp=datetime.utcnow().isoformat(),
+            error=True
+        )
+
+@api_router.post("/chat/study_tips", response_model=ChatResponse)
+async def get_study_tips(request: StudyTipsRequest):
+    """Get personalized study tips from the AI assistant"""
+    
+    try:
+        response = await chatbot_service.get_study_tips(
+            session_id=request.session_id,
+            topic=request.topic,
+            learning_style=request.learning_style
+        )
+        
+        return ChatResponse(**response)
+        
+    except Exception as e:
+        logger.error(f"Error in study_tips: {str(e)}")
+        return ChatResponse(
+            response=f"I'm having trouble generating study tips for {request.topic}. Here's a general tip: break the topic into smaller, manageable parts and practice regularly.",
+            session_id=request.session_id,
+            timestamp=datetime.utcnow().isoformat(),
+            error=True
+        )
+
+@api_router.get("/chat/history/{session_id}")
+async def get_chat_history(session_id: str):
+    """Get conversation history for a session"""
+    
+    try:
+        history = chatbot_service.get_conversation_history(session_id)
+        return {"session_id": session_id, "messages": history}
+        
+    except Exception as e:
+        logger.error(f"Error getting chat history: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve chat history")
+
+@api_router.delete("/chat/{session_id}")
+async def clear_chat_session(session_id: str):
+    """Clear conversation history for a session"""
+    
+    try:
+        success = chatbot_service.clear_conversation(session_id)
+        if success:
+            return {"message": f"Chat session {session_id} cleared successfully"}
+        else:
+            return {"message": f"Chat session {session_id} not found"}
+            
+    except Exception as e:
+        logger.error(f"Error clearing chat session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to clear chat session")
+
+# Admin endpoints
+@api_router.get("/admin/chat_stats")
+async def get_chat_statistics():
+    """Get chatbot usage statistics"""
+    
+    try:
+        stats = chatbot_service.get_session_stats()
+        active_sessions = chatbot_service.get_active_sessions()
+        
+        return {
+            "statistics": stats,
+            "active_sessions": len(active_sessions),
+            "session_ids": active_sessions[:10]  # Return first 10 for privacy
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting chat stats: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve chat statistics")
+
+# Legacy endpoints for compatibility
 @api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
+async def create_status_check(input_data: StatusCheckCreate, db=Depends(get_database)):
+    """Legacy endpoint for status checks"""
+    
+    status_dict = input_data.model_dump()
     status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
+    await db.status_checks.insert_one(status_obj.model_dump())
     return status_obj
 
 @api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
+async def get_status_checks(db=Depends(get_database)):
+    """Legacy endpoint for status retrieval"""
+    
     status_checks = await db.status_checks.find().to_list(1000)
     return [StatusCheck(**status_check) for status_check in status_checks]
 
-# Include the router in the main app
+# Include router
 app.include_router(api_router)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    logger.error(f"Global exception: {str(exc)}")
+    return {"error": "Internal server error", "detail": str(exc)}
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)
