@@ -444,25 +444,25 @@ function App() {
             </Card>
 
             {/* Learning Content */}
-            <Card className="max-w-7xl mx-auto shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
+            <Card className="w-full shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
               <CardHeader className="text-center pb-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-lg">
-                <CardTitle className="text-3xl font-bold text-slate-800">
+                <CardTitle className="text-2xl lg:text-3xl font-bold text-slate-800">
                   📚 {generatedContent.topic}
                 </CardTitle>
-                <CardDescription className="text-lg text-slate-600 mt-2">
-                  Personalized for {generatedContent.learner_level} level • {learningStyleInfo[generatedContent.learning_style]?.title}
+                <CardDescription className="text-base lg:text-lg text-slate-600 mt-2">
+                  Personalized for {generatedContent.learner_level} level learners
                 </CardDescription>
-                <div className="flex items-center justify-center gap-4 mt-4">
-                  <Badge variant="outline" className="px-4 py-2">
-                    <Target className="h-4 w-4 mr-2" />
+                <div className="flex flex-wrap items-center justify-center gap-2 lg:gap-4 mt-4">
+                  <Badge variant="outline" className="px-3 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm">
+                    <Target className="h-3 w-3 lg:h-4 lg:w-4 mr-2" />
                     {generatedContent.learning_objectives?.length} Learning Objectives
                   </Badge>
-                  <Badge variant="outline" className="px-4 py-2">
-                    <HelpCircle className="h-4 w-4 mr-2" />
+                  <Badge variant="outline" className="px-3 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm">
+                    <HelpCircle className="h-3 w-3 lg:h-4 lg:w-4 mr-2" />
                     {generatedContent.quiz?.length} Quiz Questions
                   </Badge>
-                  <Badge variant="outline" className="px-4 py-2">
-                    <BookOpen className="h-4 w-4 mr-2" />
+                  <Badge variant="outline" className="px-3 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm">
+                    <BookOpen className="h-3 w-3 lg:h-4 lg:w-4 mr-2" />
                     {generatedContent.flashcards?.length} Study Cards
                   </Badge>
                 </div>
