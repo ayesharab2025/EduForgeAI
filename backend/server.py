@@ -174,7 +174,7 @@ Generate 5 quiz questions and 8 flashcards. Ensure content is appropriate for {l
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Generate educational content for: {topic}"}
             ],
-            model="llama-3.1-70b-versatile",
+            model="llama3-8b-8192",
             temperature=0.7,
             max_tokens=4000
         )
