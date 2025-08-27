@@ -406,12 +406,15 @@ def main():
     
     tester = EduForgeAPITester()
     
-    # Run all tests
+    # Run all tests in priority order
     tests = [
         ("Root Endpoint", tester.test_root_endpoint),
         ("Health Check", tester.test_health_check),
-        ("Content Generation", tester.test_generate_content),
+        ("Content Generation (No Learning Style)", tester.test_generate_content_without_learning_style),
+        ("Content Generation (With Learning Style)", tester.test_generate_content_with_learning_style),
+        ("Content Generation (Spanish Grammar)", tester.test_generate_content_spanish_grammar),
         ("Get Content", tester.test_get_content),
+        ("Chat Functionality", tester.test_chat_functionality),
         ("Video Generation", tester.test_generate_video),
     ]
     
@@ -421,6 +424,7 @@ def main():
             test_func()
         except Exception as e:
             print(f"❌ FAILED - Unexpected error in {test_name}: {str(e)}")
+            tester.critical_failures.append(f"{test_name}: Unexpected error - {str(e)}")
         
         time.sleep(1)  # Brief pause between tests
     
@@ -433,11 +437,27 @@ def main():
     print(f"Tests Failed: {tester.tests_run - tester.tests_passed}")
     print(f"Success Rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
     
-    if tester.tests_passed == tester.tests_run:
-        print("🎉 ALL TESTS PASSED!")
+    # Report critical failures
+    if tester.critical_failures:
+        print(f"\n❌ CRITICAL FAILURES ({len(tester.critical_failures)}):")
+        for i, failure in enumerate(tester.critical_failures, 1):
+            print(f"   {i}. {failure}")
+    
+    # Report minor issues
+    if tester.minor_issues:
+        print(f"\n⚠️  MINOR ISSUES ({len(tester.minor_issues)}):")
+        for i, issue in enumerate(tester.minor_issues, 1):
+            print(f"   {i}. {issue}")
+    
+    # Overall assessment
+    if tester.tests_passed == tester.tests_run and not tester.critical_failures:
+        print("\n🎉 ALL TESTS PASSED WITH NO CRITICAL ISSUES!")
         return 0
+    elif tester.critical_failures:
+        print(f"\n⚠️  CRITICAL ISSUES FOUND - Backend needs attention")
+        return 1
     else:
-        print("⚠️  SOME TESTS FAILED - Check logs above")
+        print(f"\n⚠️  SOME TESTS FAILED - Check logs above")
         return 1
 
 if __name__ == "__main__":
