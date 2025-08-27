@@ -523,105 +523,51 @@ function App() {
                       </div>
                     </TabsContent>
 
-                    {/* AI Video Section */}
-                    <TabsContent value="video" className="space-y-6 mt-0">
-                      <div className="text-center mb-6">
-                        <h3 className="text-2xl font-semibold text-slate-800 mb-2">🎬 AI-Generated Educational Video</h3>
-                        <p className="text-slate-600">
-                          Personalized video content with professional narration and visual aids
+                    {/* Video Section */}
+                    <TabsContent value="video" className="space-y-4 lg:space-y-6 mt-0">
+                      <div className="text-center mb-4 lg:mb-6">
+                        <h3 className="text-xl lg:text-2xl font-semibold text-slate-800 mb-2">🎬 Educational Video</h3>
+                        <p className="text-sm lg:text-base text-slate-600">
+                          AI-generated video content with professional narration
                         </p>
-                      </div>
-                      
-                      {/* AI Features Showcase */}
-                      <div className="mb-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                        <div className="flex items-center gap-2 mb-4">
-                          <Sparkles className="h-5 w-5 text-blue-600" />
-                          <h4 className="font-semibold text-blue-800">AI-Powered Video Features</h4>
-                        </div>
-                        <div className="grid md:grid-cols-2 gap-4 text-sm">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-blue-700">
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                              AI-generated visual scenes using advanced LLM
-                            </div>
-                            <div className="flex items-center gap-2 text-blue-700">
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                              Professional narration with high-quality TTS
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-blue-700">
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                              Smooth transitions and animations
-                            </div>
-                            <div className="flex items-center gap-2 text-blue-700">
-                              <CheckCircle2 className="h-4 w-4 text-green-500" />
-                              1080p HD quality at 30fps
-                            </div>
-                          </div>
-                        </div>
                       </div>
                       
                       {/* Video Player */}
                       {videoUrl ? (
-                        <div className="aspect-video bg-slate-900 rounded-xl overflow-hidden shadow-2xl max-w-4xl mx-auto">
+                        <div className="aspect-video bg-slate-900 rounded-lg lg:rounded-xl overflow-hidden shadow-2xl w-full">
                           <video 
                             controls 
                             className="w-full h-full object-cover"
-                            poster="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiB2aWV3Qm94PSIwIDAgMTkyMCAxMDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJiZyIgeDE9IjAlIiB5MT0iMCUiIHgyPSIwJSIgeTI9IjEwMCUiPgo8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMGYxNzJhO3N0b3Atb3BhY2l0eToxIiAvPgo8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMyZDM3NTI7c3RvcC1vcGFjaXR5OjEiIC8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCNiZykiLz4KPGNpcmNsZSBjeD0iOTYwIiBjeT0iNTQwIiByPSI4MCIgZmlsbD0id2hpdGUiIGZpbGwtb3BhY2l0eT0iMC45Ii8+Cjxwb2x5Z29uIHBvaW50cz0iOTIwLDUwMCAxMDIwLDU0MCA5MjAsNTgwIiBmaWxsPSIjMGYxNzJhIi8+Cjx0ZXh0IHg9Ijk2MCIgeT0iNjYwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSJ3aGl0ZSIgZm9udC1zaXplPSI0OCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iYm9sZCI+RURVRE9SR0UgQUkgVklERU88L3RleHQ+Cjx0ZXh0IHg9Ijk2MCIgeT0iNzIwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOWNhM2FmIiBmb250LXNpemU9IjMyIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiPkFJLUdlbmVyYXRlZCBFZHVjYXRpb25hbCBDb250ZW50PC90ZXh0Pgo8L3N2Zz4K"
                           >
                             <source src={videoUrl} type="video/mp4" />
                             Your browser does not support the video tag.
                           </video>
                         </div>
                       ) : isGeneratingVideo ? (
-                        <div className="aspect-video bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900 rounded-xl flex items-center justify-center relative overflow-hidden max-w-4xl mx-auto">
+                        <div className="aspect-video bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900 rounded-lg lg:rounded-xl flex items-center justify-center relative overflow-hidden w-full">
                           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 animate-pulse"></div>
-                          <div className="text-center z-10 p-8">
-                            <div className="w-20 h-20 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-                            <h4 className="text-2xl font-bold text-white mb-4">Creating Your AI Video</h4>
-                            <div className="space-y-2 text-blue-200">
-                              <p className="font-medium">🤖 Generating AI visual scenes...</p>
-                              <p className="font-medium">🎙️ Creating professional narration...</p>
-                              <p className="font-medium">🎬 Adding animations & transitions...</p>
+                          <div className="text-center z-10 p-4 lg:p-8">
+                            <div className="w-16 h-16 lg:w-20 lg:h-20 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mx-auto mb-4 lg:mb-6"></div>
+                            <h4 className="text-lg lg:text-2xl font-bold text-white mb-2 lg:mb-4">Creating Your Video</h4>
+                            <div className="space-y-1 lg:space-y-2 text-blue-200 text-sm lg:text-base">
+                              <p>🤖 Generating educational content...</p>
+                              <p>🎙️ Creating narration...</p>
+                              <p>🎬 Compiling video...</p>
                             </div>
-                            <div className="w-80 bg-slate-700 rounded-full h-3 mx-auto mt-6">
+                            <div className="w-48 lg:w-80 bg-slate-700 rounded-full h-2 lg:h-3 mx-auto mt-4 lg:mt-6">
                               <div 
-                                className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300" 
+                                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 lg:h-3 rounded-full transition-all duration-300" 
                                 style={{width: `${videoProgress}%`}}
                               ></div>
                             </div>
-                            <p className="text-xs text-slate-300 mt-3">
-                              This may take 1-2 minutes for optimal quality ({Math.round(videoProgress)}% complete)
-                            </p>
                           </div>
                         </div>
                       ) : (
-                        <div className="aspect-video bg-slate-100 rounded-xl flex items-center justify-center max-w-4xl mx-auto">
-                          <div className="text-center p-8">
-                            <Video className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-                            <p className="text-slate-500 text-lg">Enhanced video generation in progress...</p>
-                            <p className="text-slate-400 text-sm mt-2">Your personalized video will appear here</p>
+                        <div className="aspect-video bg-slate-100 rounded-lg lg:rounded-xl flex items-center justify-center w-full">
+                          <div className="text-center p-4 lg:p-8">
+                            <Video className="h-12 w-12 lg:h-16 lg:w-16 text-slate-400 mx-auto mb-4" />
+                            <p className="text-slate-500 text-base lg:text-lg">Video will appear here once generated</p>
                           </div>
-                        </div>
-                      )}
-
-                      {/* Video Script Preview */}
-                      {generatedContent.video_script && (
-                        <div className="mt-8 max-w-4xl mx-auto">
-                          <h4 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                            <BookOpen className="h-5 w-5" />
-                            📝 Generated Video Script
-                          </h4>
-                          <Card className="bg-slate-50 border">
-                            <CardContent className="p-6">
-                              <div className="prose prose-slate max-w-none">
-                                <div className="text-slate-700 leading-relaxed whitespace-pre-line font-mono text-sm">
-                                  {generatedContent.video_script}
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
                         </div>
                       )}
                     </TabsContent>
