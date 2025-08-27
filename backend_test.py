@@ -63,7 +63,7 @@ class EduForgeAPITester:
             return False, {}
 
     def test_health_check(self):
-        """Test health check endpoint"""
+        """Test health check endpoint with detailed validation"""
         success, response = self.run_test(
             "Health Check",
             "GET",
@@ -72,11 +72,40 @@ class EduForgeAPITester:
         )
         
         if success:
+            # Validate required fields
+            required_fields = ['status', 'groq_configured', 'api_key_status', 'opensora_available', 'active_chat_sessions']
+            missing_fields = [field for field in required_fields if field not in response]
+            
+            if missing_fields:
+                print(f"   ⚠️  Missing fields: {missing_fields}")
+                self.minor_issues.append(f"Health check missing fields: {missing_fields}")
+            else:
+                print(f"   ✅ All required fields present")
+            
+            # Check Groq configuration
             groq_configured = response.get('groq_configured', False)
             if groq_configured:
                 print(f"   ✅ Groq API is properly configured")
             else:
-                print(f"   ⚠️  Groq API configuration issue")
+                print(f"   ❌ Groq API configuration issue")
+                self.critical_failures.append("Groq API not configured")
+                
+            # Check API key rotation status
+            api_key_status = response.get('api_key_status', {})
+            if api_key_status:
+                print(f"   📊 API Key Status:")
+                print(f"      - Current Key Index: {api_key_status.get('current_key_index', 'N/A')}")
+                print(f"      - Request Count: {api_key_status.get('request_count', 'N/A')}")
+                print(f"      - Total Keys: {api_key_status.get('total_keys', 'N/A')}")
+                print(f"      - Max Requests Per Key: {api_key_status.get('max_requests_per_key', 'N/A')}")
+            
+            # Check OpenSora availability
+            opensora_available = response.get('opensora_available', False)
+            print(f"   📹 OpenSora Available: {opensora_available}")
+            
+            # Check active chat sessions
+            active_sessions = response.get('active_chat_sessions', 0)
+            print(f"   💬 Active Chat Sessions: {active_sessions}")
                 
         return success
 
