@@ -60,108 +60,101 @@ class GroqAPIService:
         self, 
         topic: str, 
         learner_level: str, 
-        learning_style: str
+        learning_style: str = "comprehensive"
     ) -> Dict[str, Any]:
         """Generate complete educational content tailored to learning style"""
         
-        style_config = LEARNING_STYLES.get(learning_style.lower(), LEARNING_STYLES["visual"])
-        
-        system_prompt = f"""You are an expert educational content creator specializing in {learning_style} learning.
-
-Create comprehensive educational content for {learner_level} level learners about: {topic}
-
-Learning Style Focus: {style_config['content_emphasis']}
-{style_config['prompt_suffix']}
+        system_prompt = f"""You are an expert educational content creator. Create comprehensive, high-quality educational content about {topic} for {learner_level} level learners.
 
 Generate ONLY valid JSON with this exact structure:
 {{
   "learning_objectives": [
-    "Detailed objective 1 (specific and measurable)",
-    "Detailed objective 2 (with action verbs)",
-    "Detailed objective 3 (tailored to {learner_level} level)",
-    "Detailed objective 4 (aligned with {learning_style} learning)",
-    "Detailed objective 5 (practical application)"
+    "Specific, measurable learning objective 1 about {topic}",
+    "Practical learning objective 2 about {topic}",
+    "Applied learning objective 3 about {topic}",
+    "Advanced understanding objective 4 about {topic}",
+    "Real-world application objective 5 about {topic}"
   ],
-  "video_script": "Comprehensive 3-4 minute script with [SCENE: description] markers for visual cues. Include engaging narration tailored for {learning_style} learners. Format with proper paragraphs and scene breaks.",
+  "video_script": "Create a comprehensive, engaging 3-4 minute educational video script about {topic}. Write it as a complete narrative that teaches the viewer about {topic}. Do NOT include any scene markers, developer instructions, or technical notes. Write it as if you are directly teaching a student about {topic}. Start with an engaging introduction, explain key concepts clearly, provide examples, and conclude with practical applications. Make it conversational and educational.",
   "quiz": [
     {{
-      "question": "Thought-provoking question 1",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "question": "Thoughtful question about core concept of {topic}",
+      "options": ["Correct detailed answer about {topic}", "Plausible but incorrect option", "Another incorrect but reasonable option", "Obviously incorrect option"],
       "correct_answer": 0,
-      "explanation": "Detailed explanation with learning reinforcement",
-      "hint": "Helpful hint for learners"
+      "explanation": "Detailed explanation of why this answer is correct and how it relates to {topic}",
+      "hint": "Helpful hint that guides thinking about {topic}"
     }},
     {{
-      "question": "Application-based question 2",
-      "options": ["Option A", "Option B", "Option C", "Option D"], 
+      "question": "Application-based question about {topic}",
+      "options": ["Incorrect application", "Correct practical application of {topic}", "Misunderstanding of concept", "Unrelated option"],
       "correct_answer": 1,
-      "explanation": "Clear explanation connecting to learning objectives",
-      "hint": "Guiding hint"
+      "explanation": "Clear explanation connecting theory to practice in {topic}",
+      "hint": "Think about how {topic} is used in real-world scenarios"
     }},
     {{
-      "question": "Analysis question 3",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "question": "Analysis question requiring deeper understanding of {topic}",
+      "options": ["Surface-level answer", "Partially correct but incomplete", "Fully correct analytical answer about {topic}", "Incorrect analysis"],
       "correct_answer": 2,
-      "explanation": "Comprehensive explanation",
-      "hint": "Strategic hint"
+      "explanation": "Comprehensive explanation of the analytical aspects of {topic}",
+      "hint": "Consider the underlying principles of {topic}"
     }},
     {{
-      "question": "Synthesis question 4", 
-      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "question": "Problem-solving question related to {topic}",
+      "options": ["Wrong approach", "Correct problem-solving approach for {topic}", "Incomplete solution", "Irrelevant method"],
       "correct_answer": 1,
-      "explanation": "In-depth explanation",
-      "hint": "Learning-focused hint"
+      "explanation": "Step-by-step explanation of the correct problem-solving approach in {topic}",
+      "hint": "Break down the problem systematically using {topic} principles"
     }},
     {{
-      "question": "Evaluation question 5",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "question": "Evaluation question about {topic} applications",
+      "options": ["Incorrect evaluation", "Partially correct assessment", "Incomplete analysis", "Correct comprehensive evaluation of {topic}"],
       "correct_answer": 3,
-      "explanation": "Detailed explanation with examples",
-      "hint": "Supportive hint"
+      "explanation": "Detailed explanation of evaluation criteria and correct assessment of {topic}",
+      "hint": "Consider multiple factors when evaluating {topic} applications"
     }}
   ],
   "flashcards": [
     {{
-      "front": "Key concept 1",
-      "back": "Comprehensive explanation with examples"
+      "front": "What is {topic}?",
+      "back": "Comprehensive definition and explanation of {topic} with key characteristics"
     }},
     {{
-      "front": "Important term 2",
-      "back": "Clear definition with context"
+      "front": "Key principles of {topic}",
+      "back": "List and explain the fundamental principles that govern {topic}"
     }},
     {{
-      "front": "Process/Method 3",
-      "back": "Step-by-step explanation"
+      "front": "How does {topic} work?",
+      "back": "Step-by-step explanation of the process/mechanism behind {topic}"
     }},
     {{
-      "front": "Application 4",
-      "back": "Real-world example and usage"
+      "front": "Main applications of {topic}",
+      "back": "Real-world applications and use cases where {topic} is implemented"
     }},
     {{
-      "front": "Connection 5",
-      "back": "How this relates to broader concepts"
+      "front": "Benefits of {topic}",
+      "back": "Key advantages and positive impacts of using/understanding {topic}"
     }},
     {{
-      "front": "Practice 6",
-      "back": "Example problem or scenario"
+      "front": "Common challenges in {topic}",
+      "back": "Typical difficulties and how they are addressed in {topic}"
     }},
     {{
-      "front": "Summary 7",
-      "back": "Key takeaway and importance"
+      "front": "Future of {topic}",
+      "back": "Emerging trends and future developments in {topic}"
     }},
     {{
-      "front": "Next Steps 8",
-      "back": "What to learn next or how to apply"
+      "front": "Getting started with {topic}",
+      "back": "Practical steps for beginners to start learning/implementing {topic}"
     }}
   ],
   "ui_suggestions": {{
-    "color_scheme": "Recommended colors based on topic and learning style",
-    "layout_emphasis": "Visual focus areas for {learning_style} learners",
-    "interaction_type": "Recommended interaction patterns"
+    "color_scheme": "Professional color scheme suitable for {topic}",
+    "layout_emphasis": "Focus on clear content presentation for {topic}",
+    "interaction_type": "Educational interactions optimized for learning {topic}"
   }}
 }}
 
-Ensure the content is engaging, age-appropriate for {learner_level} level, and optimized for {learning_style} learning style."""
+Make sure all content is specifically about {topic}, educational, accurate, and appropriate for {learner_level} level learners. Avoid generic or placeholder content."""
 
         try:
             content = await self._make_request(
