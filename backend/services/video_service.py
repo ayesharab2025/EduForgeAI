@@ -9,7 +9,7 @@ from typing import Optional, List
 from gtts import gTTS
 from PIL import Image, ImageDraw, ImageFont
 import json
-from ..config import settings
+from config import settings
 
 logger = logging.getLogger(__name__)
 
