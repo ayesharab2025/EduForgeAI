@@ -739,21 +739,17 @@ function App() {
                     </TabsContent>
 
                     {/* Study Flashcards */}
-                    <TabsContent value="flashcards" className="space-y-6 mt-0">
-                      <div className="text-center mb-6">
-                        <h3 className="text-2xl font-semibold text-slate-800 mb-2">🎴 Interactive Study Cards</h3>
-                        <p className="text-slate-600 mb-4">
-                          Master key concepts with these personalized flashcards. Click any card to reveal the answer.
+                    <TabsContent value="flashcards" className="space-y-4 lg:space-y-6 mt-0">
+                      <div className="text-center mb-4 lg:mb-6">
+                        <h3 className="text-xl lg:text-2xl font-semibold text-slate-800 mb-2">🎴 Study Cards</h3>
+                        <p className="text-sm lg:text-base text-slate-600 mb-4">
+                          Master key concepts about {generatedContent.topic}. Click any card to flip it.
                         </p>
-                        <Badge variant="outline" className="px-4 py-2">
-                          <RotateCw className="h-4 w-4 mr-2" />
-                          {generatedContent.flashcards?.length || 0} Study Cards
-                        </Badge>
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6 w-full">
                         {generatedContent.flashcards?.map((card, index) => (
-                          <div key={card.id || index} className="relative h-48">
+                          <div key={card.id || index} className="relative h-48 lg:h-56">
                             <div 
                               onClick={() => toggleFlashcard(card.id || `card_${index}`)}
                               className={`w-full h-full cursor-pointer transition-transform duration-500 transform-style-preserve-3d ${
@@ -762,22 +758,22 @@ function App() {
                               style={{ transformStyle: 'preserve-3d' }}
                             >
                               {/* Front of card */}
-                              <div className="absolute inset-0 backface-hidden bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-xl p-6 flex items-center justify-center shadow-xl">
+                              <div className="absolute inset-0 backface-hidden bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-xl p-4 lg:p-6 flex items-center justify-center shadow-xl">
                                 <div className="text-center">
                                   <div className="text-xs opacity-80 mb-2 font-medium">Card {index + 1}</div>
-                                  <div className="font-semibold text-lg leading-relaxed mb-4">{card.front}</div>
+                                  <div className="font-semibold text-base lg:text-lg leading-relaxed mb-4">{card.front}</div>
                                   <div className="text-xs opacity-70">Click to reveal answer</div>
                                 </div>
                               </div>
                               
                               {/* Back of card */}
                               <div 
-                                className="absolute inset-0 backface-hidden bg-gradient-to-br from-green-500 to-teal-600 text-white rounded-xl p-6 flex items-center justify-center shadow-xl rotate-y-180"
+                                className="absolute inset-0 backface-hidden bg-gradient-to-br from-green-500 to-teal-600 text-white rounded-xl p-4 lg:p-6 flex items-center justify-center shadow-xl rotate-y-180"
                                 style={{ transform: 'rotateY(180deg)' }}
                               >
                                 <div className="text-center">
                                   <div className="text-xs opacity-80 mb-2 font-medium">Answer</div>
-                                  <div className="font-medium text-lg leading-relaxed mb-4">{card.back}</div>
+                                  <div className="font-medium text-base lg:text-lg leading-relaxed mb-4">{card.back}</div>
                                   <div className="text-xs opacity-70">Click to flip back</div>
                                 </div>
                               </div>
@@ -787,25 +783,12 @@ function App() {
                           <div className="col-span-full">
                             <Alert>
                               <AlertDescription>
-                                Personalized flashcards are being created to help you master the key concepts...
+                                Study cards are being created to help you master the concepts...
                               </AlertDescription>
                             </Alert>
                           </div>
                         )}
                       </div>
-
-                      {/* Flashcard Instructions */}
-                      {generatedContent.flashcards?.length > 0 && (
-                        <Card className="max-w-2xl mx-auto bg-slate-50 border-slate-200 mt-8">
-                          <CardContent className="p-6 text-center">
-                            <h4 className="font-semibold text-slate-800 mb-2">💡 Study Tips</h4>
-                            <p className="text-sm text-slate-600 leading-relaxed">
-                              For effective studying: Read the question, try to answer it mentally, then click to check. 
-                              Review cards you got wrong multiple times. Active recall strengthens memory retention!
-                            </p>
-                          </CardContent>
-                        </Card>
-                      )}
                     </TabsContent>
                   </div>
                 </Tabs>
