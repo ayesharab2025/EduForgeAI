@@ -280,7 +280,6 @@ async def create_video_from_script(script: str, content_id: str) -> str:
             video_file.name,
             fps=24,
             audio_codec='aac',
-            verbose=False,
             logger=None
         )
         
