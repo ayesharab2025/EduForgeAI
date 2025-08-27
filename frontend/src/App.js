@@ -471,25 +471,25 @@ function App() {
               <CardContent className="p-0">
                 <Tabs defaultValue="objectives" className="w-full">
                   <TabsList className="grid grid-cols-4 w-full bg-slate-100 p-1 rounded-none">
-                    <TabsTrigger value="objectives" className="flex items-center gap-2 py-3">
-                      <Target className="h-4 w-4" />
-                      Objectives
+                    <TabsTrigger value="objectives" className="flex items-center gap-1 lg:gap-2 py-2 lg:py-3 text-xs lg:text-sm">
+                      <Target className="h-3 w-3 lg:h-4 lg:w-4" />
+                      <span className="hidden sm:inline">Objectives</span>
                     </TabsTrigger>
-                    <TabsTrigger value="video" className="flex items-center gap-2 py-3">
-                      <Video className="h-4 w-4" />
-                      AI Video
+                    <TabsTrigger value="video" className="flex items-center gap-1 lg:gap-2 py-2 lg:py-3 text-xs lg:text-sm">
+                      <Video className="h-3 w-3 lg:h-4 lg:w-4" />
+                      <span className="hidden sm:inline">Video</span>
                     </TabsTrigger>
-                    <TabsTrigger value="quiz" className="flex items-center gap-2 py-3">
-                      <HelpCircle className="h-4 w-4" />
-                      Interactive Quiz
+                    <TabsTrigger value="quiz" className="flex items-center gap-1 lg:gap-2 py-2 lg:py-3 text-xs lg:text-sm">
+                      <HelpCircle className="h-3 w-3 lg:h-4 lg:w-4" />
+                      <span className="hidden sm:inline">Quiz</span>
                     </TabsTrigger>
-                    <TabsTrigger value="flashcards" className="flex items-center gap-2 py-3">
-                      <RotateCw className="h-4 w-4" />
-                      Study Cards
+                    <TabsTrigger value="flashcards" className="flex items-center gap-1 lg:gap-2 py-2 lg:py-3 text-xs lg:text-sm">
+                      <RotateCw className="h-3 w-3 lg:h-4 lg:w-4" />
+                      <span className="hidden sm:inline">Cards</span>
                     </TabsTrigger>
                   </TabsList>
 
-                  <div className="p-8">
+                  <div className="p-4 lg:p-8">
                     {/* Learning Objectives */}
                     <TabsContent value="objectives" className="space-y-6 mt-0">
                       <div className="text-center mb-6">
