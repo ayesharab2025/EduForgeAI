@@ -539,7 +539,7 @@ async def generate_content(request: ContentRequest):
 
 @api_router.post("/generate_video")
 async def generate_video(request: VideoRequest, background_tasks: BackgroundTasks):
-    """Generate video for the given content"""
+    """Generate enhanced AI-powered video for the given content"""
     try:
         # Get content from database
         content = await db.educational_content.find_one({"id": request.content_id})
@@ -547,12 +547,12 @@ async def generate_video(request: VideoRequest, background_tasks: BackgroundTask
             raise HTTPException(status_code=404, detail="Content not found")
         
         script = content.get('video_script', '')
+        topic = content.get('topic', 'Educational Content')
+        
         if not script:
             raise HTTPException(status_code=400, detail="No video script found")
         
-        topic = content.get('topic', 'Educational Content')
-        
-        # Create video
+        # Create enhanced video with AI-generated visuals
         video_path = await create_enhanced_video_from_script(script, topic, request.content_id)
         
         # Store video path in database
@@ -567,7 +567,7 @@ async def generate_video(request: VideoRequest, background_tasks: BackgroundTask
         return FileResponse(
             video_path,
             media_type="video/mp4",
-            filename=f"educational_video_{request.content_id}.mp4"
+            filename=f"eduforge_video_{request.content_id}.mp4"
         )
         
     except Exception as e:
