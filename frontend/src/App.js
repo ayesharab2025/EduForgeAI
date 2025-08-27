@@ -798,12 +798,14 @@ function App() {
         )}
       </div>
 
-      {/* Floating Chatbot */}
-      <ChatBot 
-        currentTopic={generatedContent?.topic}
-        learningStyle={generatedContent?.learning_style}
-        learnerLevel={generatedContent?.learner_level}
-      />
+      {/* Enhanced Chatbot with better positioning */}
+      <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999 }}>
+        <ChatBot 
+          currentTopic={generatedContent?.topic}
+          learningStyle="comprehensive"
+          learnerLevel={generatedContent?.learner_level}
+        />
+      </div>
     </div>
   );
 }
