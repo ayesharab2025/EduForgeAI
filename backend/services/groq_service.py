@@ -215,19 +215,14 @@ Make sure all content is specifically about {topic}, educational, accurate, and 
                 f"Evaluate different approaches and methods in {topic}",
                 f"Create solutions using {topic} knowledge and skills"
             ],
-            "video_script": f"""[SCENE: Introduction with {topic} overview]
-Welcome to this comprehensive lesson on {topic}! Today we'll explore this fascinating subject through a {learning_style} learning approach.
+            "video_script": f"""Welcome to this comprehensive lesson on {topic}! Today we'll explore this fascinating subject through a {learning_style} learning approach.
 
-[SCENE: Core concepts explanation] 
 Let's start by understanding what {topic} really means and why it's important in today's world. {style_config['content_emphasis']} will help us grasp these concepts effectively.
 
-[SCENE: Detailed breakdown]
 Now, let's dive deeper into the key components and examine how they work together to form the complete picture of {topic}.
 
-[SCENE: Practical applications]
 Finally, we'll see how {topic} applies to real-world situations and how you can use this knowledge in practical scenarios.
 
-[SCENE: Summary and next steps]
 To summarize, we've covered the essential aspects of {topic} using {learning_style} learning techniques. Remember to practice these concepts and explore further!""",
             "quiz": [
                 {
