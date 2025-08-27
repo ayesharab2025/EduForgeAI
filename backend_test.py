@@ -291,15 +291,17 @@ class EduForgeAPITester:
 
     def test_generate_video(self):
         """Test video generation endpoint"""
-        if not self.content_id:
-            print("❌ SKIPPED - No content ID available for video generation")
+        if not self.content_ids:
+            print("❌ SKIPPED - No content IDs available for video generation")
             return False
             
+        # Use the first content ID for video generation
+        content_id = self.content_ids[0]
         test_data = {
-            "content_id": self.content_id
+            "content_id": content_id
         }
         
-        print(f"   Using content ID: {self.content_id}")
+        print(f"   Using content ID: {content_id}")
         
         success, response = self.run_test(
             "Generate Video",
@@ -310,20 +312,81 @@ class EduForgeAPITester:
             timeout=120  # Video generation takes longer
         )
         
+        if success:
+            print(f"   ✅ Video generation initiated successfully")
+            # Note: Video generation is async, so we just check if the request was accepted
+        
         return success
 
     def test_get_content(self):
         """Test get content by ID endpoint"""
-        if not self.content_id:
-            print("❌ SKIPPED - No content ID available")
+        if not self.content_ids:
+            print("❌ SKIPPED - No content IDs available")
             return False
             
+        # Test retrieving the first content
+        content_id = self.content_ids[0]
         success, response = self.run_test(
             "Get Content by ID",
             "GET",
-            f"content/{self.content_id}",
+            f"content/{content_id}",
             200
         )
+        
+        if success:
+            print(f"   ✅ Successfully retrieved content by ID")
+            # Validate that the retrieved content matches what we expect
+            if response.get('id') == content_id:
+                print(f"   ✅ Content ID matches request")
+            else:
+                print(f"   ❌ Content ID mismatch")
+                self.critical_failures.append("Content ID mismatch in retrieval")
+        
+        return success
+
+    def test_chat_functionality(self):
+        """Test basic chat functionality"""
+        test_data = {
+            "session_id": "test_session_123",
+            "message": "What is machine learning?",
+            "context": {"topic": "Machine Learning"}
+        }
+        
+        success, response = self.run_test(
+            "Chat Functionality",
+            "POST",
+            "chat",
+            200,
+            data=test_data,
+            timeout=30
+        )
+        
+        if success:
+            # Validate chat response structure
+            required_fields = ['response', 'session_id', 'timestamp']
+            missing_fields = [field for field in required_fields if field not in response]
+            
+            if not missing_fields:
+                print(f"   ✅ Chat response has proper structure")
+            else:
+                print(f"   ❌ Chat response missing fields: {missing_fields}")
+                self.critical_failures.append(f"Chat response incomplete: {missing_fields}")
+            
+            # Check if response is meaningful
+            chat_response = response.get('response', '')
+            if len(chat_response) > 20:
+                print(f"   ✅ Chat response has substantial content")
+            else:
+                print(f"   ⚠️  Chat response seems too short")
+                self.minor_issues.append("Chat response too short")
+            
+            # Check session management
+            returned_session_id = response.get('session_id')
+            if returned_session_id == test_data['session_id']:
+                print(f"   ✅ Session ID properly managed")
+            else:
+                print(f"   ⚠️  Session ID mismatch")
+                self.minor_issues.append("Session ID management issue")
         
         return success
 
