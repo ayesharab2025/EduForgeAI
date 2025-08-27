@@ -11,11 +11,11 @@ from typing import List, Dict, Any
 from contextlib import asynccontextmanager
 
 # Local imports
-from .config import settings
-from .models import *
-from .services.groq_service import groq_service
-from .services.video_service import video_service
-from .services.chatbot_service import chatbot_service
+from config import settings
+from models import *
+from services.groq_service import groq_service
+from services.video_service import video_service
+from services.chatbot_service import chatbot_service
 
 # Configure logging
 logging.basicConfig(
